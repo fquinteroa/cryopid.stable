@@ -5,16 +5,16 @@
 #include <assert.h>
 #include "process.h"
 
-extern int stub_length;
-extern char stub_data[];
+extern char *_binary_stub_bin_start, *_binary_stub_bin_end;
+extern int _binary_stub_bin_size;
 
 void write_stub(int fd) {
     Elf32_Ehdr *e;
     Elf32_Shdr *s;
     char* strtab;
+    char* stub_data = (char*)&_binary_stub_bin_start;
+    int stub_size = (int)&_binary_stub_bin_size; /* eww */
     int i;
-
-    assert(stub_data != 0x0);
 
     e = (Elf32_Ehdr*)stub_data;
 
@@ -40,9 +40,9 @@ void write_stub(int fd) {
 	}
 
 	s->sh_info = IMAGE_VERSION;
-	*(long*)(stub_data+s->sh_offset) = stub_length;
+	*(long*)(stub_data+s->sh_offset) = stub_size;
 
-	write(fd, stub_data, stub_length);
+	write(fd, stub_data, stub_size);
 	return;
     }
     fprintf(stderr, "Couldn't find a valid stub linked in! Bugger.\n");

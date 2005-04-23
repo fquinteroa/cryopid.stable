@@ -1,0 +1,42 @@
+General:
+- Cleanup read vs load.
+- Cleanup static functions.
+- Cleanup header usage.
+- Cleanup error handling.
+- Cleanup verbosity/debugging messages.
+- Licensing on each file.
+
+Misc:
+- Environment
+- Command line
+- Working directory
+
+Registers:
++ regs
+
+FPU:
+- i387 state
+
+TLS:
++ TLS segments
+- tls hack
+
+File descriptors:
+- files
+- file contents
+- consoles
+- termios state
+- sockets
+
+VMAs:
++ memory segments
+
+Signal Handlers:
++ sighands
+
+
+Compression:
+- LZF
+- GZIP
+
+

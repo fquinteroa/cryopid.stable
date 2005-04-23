@@ -10,10 +10,10 @@
 #include <linux/user.h>
 #include <sys/ptrace.h>
 #include <fcntl.h>
+#include "cryopid.h"
+#include "cpimage.h"
 #include "process.h"
-
-extern void write_stub(int fd);
-extern int write_proc_image_to_file(struct proc_image_t* p, int fd);
+#include "list.h"
 
 void usage(char* argv0) {
     fprintf(stderr,
@@ -33,7 +33,7 @@ void usage(char* argv0) {
 
 int main(int argc, char** argv) {
     pid_t target_pid;
-    struct proc_image_t* proc_image;
+    struct list proc_image;
     int c;
     int flags = 0;
     int get_children = 0;
@@ -80,9 +80,9 @@ int main(int argc, char** argv) {
 	return 1;
     }
 
-    if ((proc_image = get_proc_image(target_pid, flags)) == NULL) {
-	return 1;
-    }
+    list_init(proc_image);
+    get_process(target_pid, flags, &proc_image);
+
     fd = open(argv[optind], O_CREAT|O_WRONLY|O_TRUNC, 0700);
     if (fd == -1) {
 	fprintf(stderr, "Couldn't open %s for writing: %s\n", argv[optind],
@@ -91,7 +91,11 @@ int main(int argc, char** argv) {
     }
 
     write_stub(fd);
-    write_proc_image_to_file(proc_image, fd);
+
+    stream_ops = &raw_ops; /* FIXME */
+    write_process(fd, proc_image);
+
+    close(fd);
 
     return 0;
 }

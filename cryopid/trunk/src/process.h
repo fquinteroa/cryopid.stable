@@ -1,5 +1,5 @@
-#ifndef __PROCESS_H__
-#define __PROCESS_H__
+#ifndef _PROCESS_H_
+#define _PROCESS_H_
 
 #include <malloc.h>
 #include <errno.h>
@@ -19,18 +19,10 @@
 #include <asm/ldt.h>
 #include <asm/termios.h>
 
-#define IMAGE_VERSION 0x01
+#include "cryopid.h"
+#include "cpimage.h"
 
 #define MAX_SIGS 31
-
-struct k_sigaction {
-    __sighandler_t sa_hand;
-    unsigned long sa_flags;
-    void (*sa_restorer)(void);
-    struct {
-	unsigned long sig[2];
-    } sa_mask;       /* mask last for extensibility */
-};
 
 struct map_entry_t {
     long start, length;
@@ -108,9 +100,6 @@ struct proc_header_t {
 #define GET_LIBRARIES_TOO          0x01
 #define GET_OPEN_FILE_CONTENTS     0x02
 
-#define RESUMER_START 0x00100000 /* Lowest location resume will be at */
-#define RESUMER_END   0x00200000 /* Highest location resume will be at */
-
-#endif /* __PROCESS_H__ */
+#endif /* _PROCESS_H_ */
 
 /* vim:set ts=8 sw=4 noet: */
