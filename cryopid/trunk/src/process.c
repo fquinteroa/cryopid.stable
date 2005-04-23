@@ -235,7 +235,7 @@ void get_process(pid_t pid, int flags, struct list *process_image) {
      */
     fetch_chunks_tls(pid, flags, process_image);
     fetch_chunks_vma(pid, flags, process_image);
-    fetch_chunks_fd(pid, flags, process_image);
+    /* fetch_chunks_fd(pid, flags, process_image); */
     fetch_chunks_sighand(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image);
 

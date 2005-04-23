@@ -1,5 +1,12 @@
 #include <sys/ptrace.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <linux/user.h>
+#include <errno.h>
+#include <string.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
@@ -36,8 +43,9 @@ void write_chunk_fd(void *fptr, struct cp_fd *data) {
     /* FIXME */
 }
 
-static void get_term_dev(pid_t pid) {
-    char tmp_fn[80];
+static int get_term_dev(pid_t pid) {
+    FILE *f;
+    char tmp_fn[80], stat_line[80], *stat_ptr;
     int term_dev = 0;
 
     snprintf(tmp_fn, 80, "/proc/%d/stat", pid);
@@ -63,7 +71,7 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
     struct cp_chunk *chunk = NULL;
     struct dirent *fd_dirent;
     struct stat stat_buf;
-    int proc_fd;
+    DIR *proc_fd;
     char tmp_fn[1024], tmp2_fn[1024];
 
     snprintf(tmp_fn, 30, "/proc/%d/fd", pid);
@@ -84,11 +92,11 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
 	lstat(tmp_fn, &stat_buf);
 
 	if ((stat_buf.st_mode & S_IRUSR) && (stat_buf.st_mode & S_IWUSR))
-	    chunk->mode = O_RDWR;
+	    chunk->fd.mode = O_RDWR;
 	else if (stat_buf.st_mode & S_IWUSR)
-	    chunk->mode = O_WRONLY;
+	    chunk->fd.mode = O_WRONLY;
 	else
-	    chunk->mode = O_RDONLY;
+	    chunk->fd.mode = O_RDONLY;
 
 	/* Now work out what file this FD points to */
 	memset(tmp2_fn, 0, sizeof(tmp2_fn));
@@ -98,22 +106,23 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
 	if (stat(tmp2_fn, &stat_buf) < 0)
 	    bail("Failed to stat(%s): %s", tmp2_fn, strerror(errno));
 
-	switch (stat_buf.st_mode & S_IFMT) {
-	    case S_IFSOCK:
-	    case S_IFREG:
-	    case S_IFCHR:
-		/* is our terminal? */
-	    case S_IFBLK:
-	    case S_IFDIR:
-	    case S_IFIFO:
-	    case S_IFLNK:
-	    default:
-		/* ummmm */
-		break;
-	}
+	/* WIP: */
+	// switch (stat_buf.st_mode & S_IFMT) {
+	//     case S_IFSOCK:
+	//     case S_IFREG:
+	//     case S_IFCHR:
+	// 	/* is our terminal? */
+	//     case S_IFBLK:
+	//     case S_IFDIR:
+	//     case S_IFIFO:
+	//     case S_IFLNK:
+	//     default:
+	// 	/* ummmm */
+	// 	break;
+	// }
 
 	/* Record it */
-	chunk->fd = atoi(fd_dirent->d_name);
+	chunk->fd.fd = atoi(fd_dirent->d_name);
 	chunk->type = CP_CHUNK_FD;
 	list_add(l, chunk);
 	chunk = NULL;
