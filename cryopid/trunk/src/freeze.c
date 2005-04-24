@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
     int flags = 0;
     int get_children = 0;
     int fd;
+    long heap_start;
 
     /* Parse options */
     while (1) {
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
     }
 
     list_init(proc_image);
-    get_process(target_pid, flags, &proc_image);
+    get_process(target_pid, flags, &proc_image, &heap_start);
 
     fd = open(argv[optind], O_CREAT|O_WRONLY|O_TRUNC, 0777);
     if (fd == -1) {
@@ -117,7 +118,7 @@ int main(int argc, char** argv) {
 	return 1;
     }
 
-    write_stub(fd);
+    write_stub(fd, heap_start);
 
     write_process(fd, proc_image);
 

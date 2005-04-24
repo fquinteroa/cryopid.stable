@@ -7,9 +7,10 @@
 char *stub_start;
 int stub_size;
 
-void write_stub(int fd) {
+void write_stub(int fd, long heap_start) {
     Elf32_Ehdr *e;
     Elf32_Shdr *s;
+    Elf32_Phdr *p;
     char* strtab;
     int i;
 
@@ -22,6 +23,18 @@ void write_stub(int fd) {
     s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize)));
     strtab = stub_start+s->sh_offset;
     
+    for (i = 0; i < e->e_phnum; i++) {
+	p = (Elf32_Phdr*)(stub_start+e->e_phoff+(i*e->e_phentsize));
+	if (p->p_vaddr != 0x41414141)
+	    continue;
+
+	p->p_vaddr = p->p_paddr = heap_start;
+	p->p_memsz = 4;
+	p->p_filesz = 0;
+	p->p_offset = 0;
+	printf("Heap tweakd\n");
+    }
+
     for (i = 0; i < e->e_shnum; i++) {
 	s = (Elf32_Shdr*)(stub_start+e->e_shoff+(i*e->e_shentsize));
 	if (s->sh_type != SHT_PROGBITS || s->sh_name == 0)

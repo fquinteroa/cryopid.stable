@@ -176,7 +176,7 @@ void write_string(void *fptr, char *buf);
 int read_chunk(void *fptr, struct cp_chunk **chunkp, int load);
 void write_chunk(void *fptr, struct cp_chunk *chunk);
 void write_process(int fd, struct list l);
-void get_process(pid_t pid, int flags, struct list *l);
+void get_process(pid_t pid, int flags, struct list *l, long *heap_start);
 
 /* cp_misc.c */
 void read_chunk_misc(void *fptr, struct cp_misc *data, int load);
@@ -219,7 +219,7 @@ void save_fd_socket(pid_t pid, int flags, int fd, int inode, struct cp_socket *s
 /* cp_vma.c */
 void read_chunk_vma(void *fptr, struct cp_vma *data, int load);
 void write_chunk_vma(void *fptr, struct cp_vma *data);
-void fetch_chunks_vma(pid_t pid, int flags, struct list *l);
+void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start);
 extern int extra_prot_flags;
 extern long scribble_zone;
 

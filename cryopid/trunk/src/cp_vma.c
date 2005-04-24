@@ -72,7 +72,7 @@ void write_chunk_vma(void *fptr, struct cp_vma *data) {
 }
 
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
-	int get_library_data) {
+	int get_library_data, long *heap_start) {
     char *ptr1, *ptr2;
     int dminor, dmajor;
 
@@ -178,10 +178,14 @@ keep_going:
 
 	ptr1 = ptr2+1;
 	while (*ptr1 == ' ') ptr1++;
-	if (*ptr1 != '\n' && *ptr1 != '[') { /* we have a filename too to grab */
+	if (*ptr1 != '\n') { /* we have a filename too to grab */
 	    ptr2 = strchr(ptr1, '\n');
 	    if (ptr2) *ptr2 = '\0';
 	    vma->filename = strdup(ptr1);
+	    if (heap_start && strcmp(vma->filename, "[heap]") == 0) {
+		*heap_start = vma->start;
+		vma->flags |= MAP_ANONYMOUS;
+	    }
 	} else {
 	    vma->flags |= MAP_ANONYMOUS;
 	}
@@ -252,7 +256,7 @@ keep_going:
     return 1;
 }
 
-void fetch_chunks_vma(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start) {
     struct cp_chunk *chunk = NULL;
     char tmp_fn[30];
     char map_line[128];
@@ -265,7 +269,8 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l) {
 	if (!chunk)
 	    chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_VMA;
-	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO)) {
+	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
+		    heap_start)) {
 	    debug("     Error parsing map: %s", map_line);
 	    continue;
 	}
