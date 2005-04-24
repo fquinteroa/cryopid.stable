@@ -35,10 +35,10 @@ static int raw_read(void *fptr, void *buf, int len) {
     togo = len;
     p = buf;
     while (togo > 0) {
-	rlen = read(rd->fd, p, len);
+	rlen = read(rd->fd, p, togo);
 	if (rlen <= 0)
 	    bail("read(rd->fd, %p, %d) failed: %s", 
-		    p, len, strerror(errno));
+		    p, togo, strerror(errno));
 	p += rlen;
 	togo -= rlen;
     }
@@ -65,12 +65,14 @@ static void raw_dup2(void *fptr, int newfd) {
     rd->fd = newfd;
 }
 
-struct stream_ops raw_ops = {
+static struct stream_ops raw_ops = {
     .init = raw_init,
     .read = raw_read,
     .write = raw_write,
     .finish = raw_finish,
     .dup2 = raw_dup2,
 };
+
+declare_writer(raw, raw_ops, "Writes directly to an output file");
 
 /* vim:set ts=8 sw=4 noet: */

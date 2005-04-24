@@ -17,8 +17,12 @@
 
 #define TRAMPOLINE_ADDR	0x0010000
 
-#define RESUMER_START 0x00100000 /* Lowest location resume will be at */
-#define RESUMER_END   0x00200000 /* Highest location resume will be at */
+#define RESUMER_START	0x00100000 /* Lowest location resume will be at */
+#define RESUMER_END	0x00200000 /* Highest location resume will be at */
+
+/* Here we store a pool of 30MB to use */
+#define MALLOC_START	0x00200000
+#define MALLOC_END	0x02000000
 
 struct k_sigaction {
     __sighandler_t sa_hand;
@@ -155,12 +159,13 @@ struct cp_chunk {
 };
 
 struct stream_ops {
-	void *(*init)(int fd, int mode);
-	void (*finish)(void *data);
-	int (*read)(void *data, void *buf, int len);
-	int (*write)(void *data, void *buf, int len);
-	void (*dup2)(void *data, int newfd);
-} *stream_ops;
+    void *(*init)(int fd, int mode);
+    void (*finish)(void *data);
+    int (*read)(void *data, void *buf, int len);
+    int (*write)(void *data, void *buf, int len);
+    void (*dup2)(void *data, int newfd);
+};
+extern struct stream_ops *stream_ops;
 
 
 /* cpimage.c */

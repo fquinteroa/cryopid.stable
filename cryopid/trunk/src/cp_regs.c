@@ -26,6 +26,12 @@ static void process_chunk_regs(struct user *user) {
     /* set up a temporary stack for use */
     *cp++=0xbc;*(long*)(cp) = (long)code+0x0ff0; cp+=4; /* mov 0x11000, %esp */
 
+    /* munmap our custom malloc space */
+    *cp++=0xb8;*(long*)(cp) = __NR_munmap; cp+=4; /* mov foo, %eax  */
+    *cp++=0xbb;*(long*)(cp) = MALLOC_START; cp+=4; /* mov foo, %ebx  */
+    *cp++=0xb9;*(long*)(cp) = MALLOC_END-MALLOC_START; cp+=4; /* mov foo, %ecx  */
+    *cp++=0xcd;*cp++=0x80; /* int $0x80 */
+
     /* munmap resumer code except for us - except when we're needed for our
      * segvhandler */
     if (!tls_hack) {

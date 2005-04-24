@@ -7,19 +7,51 @@
 #include "cryopid.h"
 #include "list.h"
 
+#define CHECKSUM
+
+#ifdef CHECKSUM
+int checksum(char *ptr, int len) {
+    int sum = 0, i;
+    for (i = 0; i < len; i++)
+	sum += ptr[i];
+	//sum = ((sum << 5) + sum) ^ ptr[i];
+    return sum;
+}
+#endif
+
 void read_bit(void *fptr, void *buf, int len) {
     int rlen;
+
+    if (len == 0)
+	return;
+
+#ifdef CHECKSUM
+    int c;
+    stream_ops->read(fptr, &c, sizeof(c));
+#endif
     rlen = stream_ops->read(fptr, buf, len);
     if (rlen != len)
 	bail("Read error (wanted %d bytes, got %d)!", len, rlen);
+#ifdef CHECKSUM
+    if (c != checksum(buf, len))
+	debug("CHECKSUM MISMATCH (len %d): should be 0x%x, measured 0x%x", len, c, checksum(buf, len));
+#endif
 }
 
 void write_bit(void *fptr, void *buf, int len) {
+    if (len == 0)
+	return;
+
+#ifdef CHECKSUM
+    int c = checksum(buf, len);
+    stream_ops->write(fptr, &c, sizeof(c));
+#endif
     if (stream_ops->write(fptr, buf, len) != len)
 	bail("Write error!");
 }
 
 char *read_string(void *fptr, char *buf, int maxlen) {
+    static char str_buf[1024];
     int len;
 
     read_bit(fptr, &len, sizeof(int));
@@ -27,11 +59,11 @@ char *read_string(void *fptr, char *buf, int maxlen) {
     if (len > maxlen) /* We don't cater for this */
 	bail("String longer than expected!");
 
-    if (!buf) {
-	buf = malloc(len+1);
-	if (!buf)
-	    bail("Out of memory!");
-    }
+    if (len > 1024) /* FIXME: hack */
+	bail("String longer than can handle!");
+
+    if (!buf)
+	buf = str_buf;
 
     read_bit(fptr, buf, len);
     buf[len] = '\0';
@@ -51,7 +83,7 @@ void write_string(void *fptr, char *buf) {
 }
 
 int read_chunk(void *fptr, struct cp_chunk **chunkp, int load) {
-    struct cp_chunk *chunk;
+    struct cp_chunk *chunk = NULL;
     int magic, type;
     
     /* debug("Reading chunk at %d...", ftell(*(FILE**)fptr)); */
@@ -62,9 +94,7 @@ int read_chunk(void *fptr, struct cp_chunk **chunkp, int load) {
 
     read_bit(fptr, &type, sizeof(type));
 
-    if (load)
-	chunk = NULL;
-    else {
+    if (!load) {
 	chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = type;
     }

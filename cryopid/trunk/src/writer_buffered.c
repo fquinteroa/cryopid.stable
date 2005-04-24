@@ -58,7 +58,7 @@ static int buf_read(void *fptr, void *buf, int len) {
     togo = len;
     p = buf;
     while (togo > 0) {
-	rlen = fread(p, 1, len, rd->f);
+	rlen = fread(p, 1, togo, rd->f);
 	if (rlen <= 0)
 	    bail("fread(%p, 1, %d, rd->f) failed: %s", 
 		    p, len, strerror(errno));
@@ -97,12 +97,14 @@ static void buf_dup2(void *fptr, int newfd) {
     setvbuf(rd->f, rd->buffer, _IOFBF, BUFSIZ);
 }
 
-struct stream_ops buf_ops = {
+static struct stream_ops buf_ops = {
     .init = buf_init,
     .read = buf_read,
     .write = buf_write,
     .finish = buf_finish,
     .dup2 = buf_dup2,
 };
+
+declare_writer(buffered, buf_ops, "Writes an output file with buffering");
 
 /* vim:set ts=8 sw=4 noet: */

@@ -124,7 +124,7 @@ void seek_to_image(int fd) {
     syscall_check(lseek(fd, e.e_shoff+(e.e_shstrndx*e.e_shentsize), SEEK_SET), 0, "lseek");
     safe_read(fd, &s, sizeof(s), "string table section header");
     syscall_check(lseek(fd, s.sh_offset, SEEK_SET), 0, "lseek");
-    strtab = malloc(s.sh_size);
+    strtab = xmalloc(s.sh_size);
     safe_read(fd, strtab, s.sh_size, "string table");
 
     for (i=0; i < e.e_shnum; i++) {
@@ -200,12 +200,12 @@ void real_main(int argc, char** argv) {
      */
     if (lseek(image_fd, 0, SEEK_SET) != -1) {
 	safe_read(image_fd, &argc, sizeof(argc), "argc from cryopid.state");
-	argv = (char**)malloc(sizeof(char*)*argc+1);
+	argv = (char**)xmalloc(sizeof(char*)*argc+1);
 	argv[argc] = NULL;
 	int i, len;
 	for (i=0; i < argc; i++) {
 	    safe_read(image_fd, &len, sizeof(len), "argv len from cryopid.state");
-	    argv[i] = (char*)malloc(len);
+	    argv[i] = (char*)xmalloc(len);
 	    safe_read(image_fd, argv[i], len, "new argv from cryopid.state");
 	}
 	close(image_fd);
@@ -268,7 +268,6 @@ void real_main(int argc, char** argv) {
     image_fd = open_self();
     seek_to_image(image_fd);
 
-    stream_ops = &buf_ops;
     read_process();
 
     fprintf(stderr, "Something went wrong :(\n");
@@ -280,19 +279,20 @@ int main(int argc, char**argv) {
     void *stack_ptr;
     void *top_of_old_stack;
     void *top_of_new_stack;
+    void *top_of_our_memory = (void*)MALLOC_END;
     long size_of_new_stack;
     
     int i;
 
     /* Take a copy of our argc/argv and environment below we blow them away */
     real_argc = argc;
-    real_argv = (char**)malloc((sizeof(char*)*argc)+1);
+    real_argv = (char**)xmalloc((sizeof(char*)*argc)+1);
     for(i=0; i < argc; i++)
 	real_argv[i] = strdup(argv[i]);
     real_argv[i] = NULL;
 
     for(i = 0; environ[i]; i++); /* count environment variables */
-    real_environ = malloc((sizeof(char*)*i)+1);
+    real_environ = xmalloc((sizeof(char*)*i)+1);
     for(i = 0; environ[i]; i++)
 	*real_environ++ = strdup(environ[i]);
     *real_environ = NULL;
@@ -320,8 +320,8 @@ int main(int argc, char**argv) {
 
     /* unmap absolutely everything above us! */
     syscall_check(
-	    munmap(top_of_new_stack,
-		(top_of_old_stack - top_of_new_stack)),
+	    munmap(top_of_our_memory,
+		(top_of_old_stack - top_of_our_memory)),
 		0, "munmap(stack)");
     
     /* Now hope for the best! */

@@ -36,7 +36,7 @@
 #include "list.h"
 
 char* backup_page(pid_t target, void* addr) {
-    long* page = malloc(PAGE_SIZE);
+    long* page = xmalloc(PAGE_SIZE);
     int i;
     long ret;
     for(i = 0; i < PAGE_SIZE/sizeof(long); i++) {

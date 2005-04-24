@@ -9,8 +9,10 @@ General:
 - Cleanup header usage.
 - Cleanup error handling.
 - Cleanup verbosity/debugging messages.
-- Licensing on each file.
 - Check use of malloc in restore funcs.
+- Licensing on each file.
+- Do a better malloc implementation (even if it involves beating libc malloc to
+  not use mmap somehow).
 
 Misc:
 - Environment
@@ -42,7 +44,8 @@ Signal Handlers:
 
 
 Compression:
-- LZF
++ LZF
+- LZF in-place decompression
 - GZIP
 
 
