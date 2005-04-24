@@ -81,7 +81,6 @@ void read_process() {
 
     /* Cleanup the input file. */
     stream_ops->finish(fptr);
-    close(image_fd);
 
     /* The trampoline code should now be magically loaded at 0x10000.
      * Jumping there will restore registers and continue execution.

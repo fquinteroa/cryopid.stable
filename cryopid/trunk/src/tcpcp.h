@@ -9,7 +9,7 @@
 #ifndef TCPCP_H
 #define TCPCP_H
 
-void *tcpcp_get(int s);
+void *tcpcp_get(pid_t pid, int s);
 int tcpcp_create(const void *ici);
 int tcpcp_activate(int s);
 

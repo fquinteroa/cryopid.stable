@@ -7,7 +7,7 @@ General:
 - Cleanup read vs load.
 - Cleanup static functions.
 - Cleanup header usage.
-- Cleanup error handling.
+- Cleanup error handling (abort cleanly to the process in question too).
 - Cleanup verbosity/debugging messages.
 - Check use of malloc in restore funcs.
 - Licensing on each file.
@@ -34,7 +34,9 @@ File descriptors:
 - file contents
 + consoles
 + termios state
-- sockets
++ TCP sockets
+- UDP sockets
+- Unix sockets
 
 VMAs:
 + memory segments

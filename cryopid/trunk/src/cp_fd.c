@@ -11,6 +11,8 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
+int console_fd;
+
 static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
     struct user_regs_struct r;
 
@@ -52,9 +54,14 @@ void read_chunk_fd(void *fptr, struct cp_fd *data, int load) {
 	case CP_CHUNK_FD_MAXFD:
 	    /* No read routines needed, however, we do need to move our fd */
 	    stream_ops->dup2(fptr, fd+1);
+	    /* And make sure we can get a console on max_fd+2 in case we need it */
+	    console_fd = fd+2;
+	    dup2(0, console_fd);
 	    break;
 	case CP_CHUNK_FD_FILE:
+	    break;
 	case CP_CHUNK_FD_SOCKET:
+	    read_chunk_fd_socket(fptr, NULL, load, fd);
 	    break;
 	default:
 	    bail("Invalid FD chunk type %d!", type);
@@ -75,7 +82,9 @@ void write_chunk_fd(void *fptr, struct cp_fd *data) {
 	    /* No extra write routines needed. */
 	    break;
 	case CP_CHUNK_FD_FILE:
+	    break;
 	case CP_CHUNK_FD_SOCKET:
+	    write_chunk_fd_socket(fptr, &data->socket);
 	    break;
 	default:
 	    bail("Invalid FD chunk type %d!", data->type);
@@ -163,6 +172,10 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
 		}
 		break;
 	    case S_IFSOCK:
+		save_fd_socket(pid, flags, chunk->fd.fd, stat_buf.st_ino,
+			&chunk->fd.socket);
+		chunk->fd.type = CP_CHUNK_FD_SOCKET;
+		break;
 	    case S_IFREG:
 	    case S_IFBLK:
 	    case S_IFDIR:

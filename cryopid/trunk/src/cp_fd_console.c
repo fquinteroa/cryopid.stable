@@ -46,6 +46,7 @@ void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console) {
 static void restore_fd_console(int fd, struct cp_console *console) {
     /* Declare ioctl extern, as including sys/ioctl.h makes compilation unhappy :/ */
     extern int ioctl(int fd, unsigned long req, ...);
+    dup2(console_fd, fd);
     ioctl(fd, TCSETS, &console->termios);
 }
 

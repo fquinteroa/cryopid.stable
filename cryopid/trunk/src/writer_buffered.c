@@ -47,6 +47,7 @@ static void buf_finish(void *fptr) {
     struct buf_data *rd = fptr;
 
     fflush(rd->f);
+    close(rd->fd);
     free(rd);
 }
 

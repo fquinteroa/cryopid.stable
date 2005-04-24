@@ -3,7 +3,7 @@
 
 #include <sys/socket.h>
 #include <linux/types.h>
-#include <linux/in.h>
+#include <netinet/in.h>
 #include <linux/un.h>
 #include <linux/user.h>
 #include <linux/unistd.h>
@@ -204,11 +204,17 @@ extern int tls_hack;
 void read_chunk_fd(void *fptr, struct cp_fd *data, int load);
 void write_chunk_fd(void *fptr, struct cp_fd *data);
 void fetch_chunks_fd(pid_t pid, int flags, struct list *l);
+extern int console_fd;
 
 /* cp_fd_console.c */
 void read_chunk_fd_console(void *fptr, struct cp_console *console, int load, int fd);
 void write_chunk_fd_console(void *fptr, struct cp_console *console);
 void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console);
+
+/* cp_fd_socket.c */
+void read_chunk_fd_socket(void *fptr, struct cp_socket *socket, int load, int fd);
+void write_chunk_fd_socket(void *fptr, struct cp_socket *socket);
+void save_fd_socket(pid_t pid, int flags, int fd, int inode, struct cp_socket *socket);
 
 /* cp_vma.c */
 void read_chunk_vma(void *fptr, struct cp_vma *data, int load);

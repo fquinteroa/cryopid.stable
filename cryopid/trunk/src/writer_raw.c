@@ -24,6 +24,7 @@ static void *raw_init(int fd, int mode) {
 
 static void raw_finish(void *fptr) {
     struct raw_data *rd = fptr;
+    close(rd->fd);
     free(rd);
 }
 

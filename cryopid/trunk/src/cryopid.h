@@ -43,6 +43,7 @@ extern struct stream_ops lzo_ops;
 
 /* process.c */
 int do_syscall(pid_t pid, struct user_regs_struct *regs);
+int is_in_syscall(pid_t pid, void* eip);
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
 int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
 

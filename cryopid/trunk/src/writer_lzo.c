@@ -182,6 +182,7 @@ static void lzo_writer_finish(void *fptr) {
 	fprintf(stderr, "\n");
     }
 
+    close(ld->fd);
     free(ld);
 }
 
