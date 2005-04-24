@@ -49,3 +49,6 @@ Compression:
 - GZIP
 
 
+Graphics:
+- Gtk hooks
+- Fix Gdk
