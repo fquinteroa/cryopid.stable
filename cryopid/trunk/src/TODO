@@ -1,3 +1,8 @@
+Legend:
+ [-] not yet done
+ [+] done
+ [*] in progress
+
 General:
 - Cleanup read vs load.
 - Cleanup static functions.
@@ -5,6 +10,7 @@ General:
 - Cleanup error handling.
 - Cleanup verbosity/debugging messages.
 - Licensing on each file.
+- Check use of malloc in restore funcs.
 
 Misc:
 - Environment
@@ -19,13 +25,13 @@ FPU:
 
 TLS:
 + TLS segments
-- tls hack
++ tls hack
 
 File descriptors:
 - files
 - file contents
-- consoles
-- termios state
++ consoles
++ termios state
 - sockets
 
 VMAs:

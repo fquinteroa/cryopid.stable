@@ -11,7 +11,8 @@ struct list {
 };
 
 #define list_init(list)		{ list.head = list.tail = NULL; }
-void list_add(struct list *l, void *p);
+void list_append(struct list *l, void *p);
+void list_insert(struct list *l, void *p);
 
 #endif /* _LIST_H_ */
 

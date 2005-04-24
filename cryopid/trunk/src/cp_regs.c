@@ -81,7 +81,7 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l) {
     chunk = xmalloc(sizeof(struct cp_chunk));
     chunk->type = CP_CHUNK_REGS;
     chunk->regs.user_data = user_data;
-    list_add(l, chunk);
+    list_append(l, chunk);
 }
 
 void read_chunk_regs(void *fptr, struct cp_regs *data, int load) {

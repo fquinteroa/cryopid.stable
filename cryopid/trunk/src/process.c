@@ -228,18 +228,38 @@ static void end_ptrace(pid_t pid) {
 }
 
 void get_process(pid_t pid, int flags, struct list *process_image) {
+    int success = 0;
+    char* pagebackup;
+
     start_ptrace(pid);
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
      */
     fetch_chunks_tls(pid, flags, process_image);
-    fetch_chunks_vma(pid, flags, process_image);
-    /* fetch_chunks_fd(pid, flags, process_image); */
+
+    fetch_chunks_vma(pid, flags, process_image); /* gives us a scribble zone */
+
+    if (!scribble_zone) {
+	fprintf(stderr, "[-] No suitable scribble zone could be found. Aborting.\n");
+	goto out_ptrace;
+    }
+    pagebackup = backup_page(pid, (void*)scribble_zone);
+
+    fetch_chunks_fd(pid, flags, process_image);
+
     fetch_chunks_sighand(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image);
 
+    success = 1;
+
+out_restore:
+    restore_page(pid, (void*)scribble_zone, pagebackup);
+out_ptrace:
     end_ptrace(pid);
+    
+    if (!success)
+	abort();
 }
 
 /* vim:set ts=8 sw=4 noet: */

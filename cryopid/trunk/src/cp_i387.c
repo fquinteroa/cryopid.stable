@@ -34,7 +34,7 @@ void fetch_chunks_i387_data(pid_t pid, int flags, struct list *l) {
     chunk = xmalloc(sizeof(struct cp_chunk));
     chunk->type = CP_CHUNK_I387_DATA;
     chunk->i387_data.i387_data = i387_data;
-    list_add(l, chunk);
+    list_append(l, chunk);
 }
 
 /* vim:set ts=8 sw=4 noet: */

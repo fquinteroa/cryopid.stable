@@ -54,7 +54,13 @@ static inline int set_rt_sigaction(int sig, const struct k_sigaction* ksa,
 #define CP_CHUNK_SIGHAND	0x07
 #define CP_CHUNK_FINAL		0x08
 
-#define CP_CHUNK_MAGIC		0xC01D
+#define CP_CHUNK_MAGIC		0xC0DE
+
+/* Constants for cp_fd.type */
+#define CP_CHUNK_FD_FILE	0x01
+#define CP_CHUNK_FD_CONSOLE	0x02
+#define CP_CHUNK_FD_SOCKET	0x03
+#define CP_CHUNK_FD_MAXFD	0x04
 
 struct cp_misc {
 	char *cmdline;
@@ -153,6 +159,7 @@ struct stream_ops {
 	void (*finish)(void *data);
 	int (*read)(void *data, void *buf, int len);
 	int (*write)(void *data, void *buf, int len);
+	void (*dup2)(void *data, int newfd);
 } *stream_ops;
 
 
@@ -185,12 +192,18 @@ void process_chunk_i387_data(struct cp_i387_data *data);
 void read_chunk_tls(void *fptr, struct cp_tls *data, int load);
 void write_chunk_tls(void *fptr, struct cp_tls *data);
 void fetch_chunks_tls(pid_t pid, int flags, struct list *l);
+void install_tls_segv_handler();
 extern int tls_hack;
 
 /* cp_fd.c */
 void read_chunk_fd(void *fptr, struct cp_fd *data, int load);
 void write_chunk_fd(void *fptr, struct cp_fd *data);
 void fetch_chunks_fd(pid_t pid, int flags, struct list *l);
+
+/* cp_fd_console.c */
+void read_chunk_fd_console(void *fptr, struct cp_console *console, int load, int fd);
+void write_chunk_fd_console(void *fptr, struct cp_console *console);
+void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console);
 
 /* cp_vma.c */
 void read_chunk_vma(void *fptr, struct cp_vma *data, int load);

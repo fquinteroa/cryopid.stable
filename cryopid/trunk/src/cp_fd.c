@@ -36,17 +36,56 @@ static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
 
 
 void read_chunk_fd(void *fptr, struct cp_fd *data, int load) {
-    /* FIXME */
+    int fd, type, mode, close_on_exec;
+    if (!load)
+	abort(); /* FIXME: unsupported as yet. need to rethink this. */
+
+    read_bit(fptr, &fd, sizeof(int));
+    read_bit(fptr, &type, sizeof(int));
+    read_bit(fptr, &mode, sizeof(int));
+    read_bit(fptr, &close_on_exec, sizeof(int));
+
+    switch (type) {
+	case CP_CHUNK_FD_CONSOLE:
+	    read_chunk_fd_console(fptr, NULL, load, fd);
+	    break;
+	case CP_CHUNK_FD_MAXFD:
+	    /* No read routines needed, however, we do need to move our fd */
+	    stream_ops->dup2(fptr, fd+1);
+	    break;
+	case CP_CHUNK_FD_FILE:
+	case CP_CHUNK_FD_SOCKET:
+	    break;
+	default:
+	    bail("Invalid FD chunk type %d!", type);
+    }
 }
 
 void write_chunk_fd(void *fptr, struct cp_fd *data) {
-    /* FIXME */
+    write_bit(fptr, &data->fd, sizeof(int));
+    write_bit(fptr, &data->type, sizeof(int));
+    write_bit(fptr, &data->mode, sizeof(int));
+    write_bit(fptr, &data->close_on_exec, sizeof(int));
+
+    switch (data->type) {
+	case CP_CHUNK_FD_CONSOLE:
+	    write_chunk_fd_console(fptr, &data->console);
+	    break;
+	case CP_CHUNK_FD_MAXFD:
+	    /* No extra write routines needed. */
+	    break;
+	case CP_CHUNK_FD_FILE:
+	case CP_CHUNK_FD_SOCKET:
+	    break;
+	default:
+	    bail("Invalid FD chunk type %d!", data->type);
+    }
 }
 
-static int get_term_dev(pid_t pid) {
+static dev_t get_term_dev(pid_t pid) {
     FILE *f;
     char tmp_fn[80], stat_line[80], *stat_ptr;
-    int term_dev = 0;
+    dev_t term_dev = 0;
 
     snprintf(tmp_fn, 80, "/proc/%d/stat", pid);
     memset(stat_line, 0, sizeof(stat_line));
@@ -72,7 +111,9 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
     struct dirent *fd_dirent;
     struct stat stat_buf;
     DIR *proc_fd;
-    char tmp_fn[1024], tmp2_fn[1024];
+    char tmp_fn[1024];
+    dev_t term_dev = get_term_dev(pid);
+    int max_fd = 0;
 
     snprintf(tmp_fn, 30, "/proc/%d/fd", pid);
     proc_fd = opendir(tmp_fn);
@@ -87,8 +128,13 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
 	if (fd_dirent->d_type != DT_LNK)
 	    continue;
 
+	chunk->fd.fd = atoi(fd_dirent->d_name);
+
+	if (chunk->fd.fd > max_fd)
+	    max_fd = chunk->fd.fd;
+
 	/* Find out if it's open for r/w/rw */
-	snprintf(tmp_fn, 1024, "/proc/%d/fd/%s", pid, fd_dirent->d_name);
+	snprintf(tmp_fn, 1024, "/proc/%d/fd/%d", pid, chunk->fd.fd);
 	lstat(tmp_fn, &stat_buf);
 
 	if ((stat_buf.st_mode & S_IRUSR) && (stat_buf.st_mode & S_IWUSR))
@@ -98,35 +144,47 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
 	else
 	    chunk->fd.mode = O_RDONLY;
 
-	/* Now work out what file this FD points to */
-	memset(tmp2_fn, 0, sizeof(tmp2_fn));
-	readlink(tmp_fn, tmp2_fn, sizeof(tmp2_fn)-1);
-
 	/* This time stat the file/fifo/socket/etc, not the link */
-	if (stat(tmp2_fn, &stat_buf) < 0)
-	    bail("Failed to stat(%s): %s", tmp2_fn, strerror(errno));
+	if (stat(tmp_fn, &stat_buf) < 0)
+	    bail("Failed to stat(%s): %s", tmp_fn, strerror(errno));
 
-	/* WIP: */
-	// switch (stat_buf.st_mode & S_IFMT) {
-	//     case S_IFSOCK:
-	//     case S_IFREG:
-	//     case S_IFCHR:
-	// 	/* is our terminal? */
-	//     case S_IFBLK:
-	//     case S_IFDIR:
-	//     case S_IFIFO:
-	//     case S_IFLNK:
-	//     default:
-	// 	/* ummmm */
-	// 	break;
-	// }
+	switch (stat_buf.st_mode & S_IFMT) {
+	    case S_IFCHR:
+		/* FIXME - only save termios for consoles once */
+		/* is our terminal? */
+		if (stat_buf.st_rdev == term_dev) {
+		    save_fd_console(pid, flags, chunk->fd.fd, &chunk->fd.console);
+		    chunk->fd.type = CP_CHUNK_FD_CONSOLE;
+		    fprintf(stderr, "Saved console chunk (%d).\n", chunk->fd.fd);
+		} else {
+		    /* hmmm. what to do, what to do? */
+		    debug("Ignoring open character device %s", tmp_fn);
+		    continue;
+		}
+		break;
+	    case S_IFSOCK:
+	    case S_IFREG:
+	    case S_IFBLK:
+	    case S_IFDIR:
+	    case S_IFIFO:
+	    case S_IFLNK:
+	    default:
+		/* ummmm */
+		continue;
+	}
 
 	/* Record it */
-	chunk->fd.fd = atoi(fd_dirent->d_name);
 	chunk->type = CP_CHUNK_FD;
-	list_add(l, chunk);
+	list_append(l, chunk);
 	chunk = NULL;
     }
+
+    /* Note the highest used fd */
+    chunk = xmalloc(sizeof(struct cp_chunk));
+    chunk->type = CP_CHUNK_FD;
+    chunk->fd.type = CP_CHUNK_FD_MAXFD;
+    chunk->fd.fd = max_fd;
+    list_insert(l, chunk);
 }
 
 /* vim:set ts=8 sw=4 noet: */

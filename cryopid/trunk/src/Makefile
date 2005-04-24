@@ -1,7 +1,8 @@
 TARGETS = freeze
-CHUNK_OBJS = cp_fd.o cp_i387.o cp_misc.o cp_regs.o \
+CHUNK_OBJS = cp_fd.o cp_fd_console.o cp_i387.o cp_misc.o cp_regs.o \
 		cp_sighand.o cp_tls.o cp_vma.o
-OBJECTS = common.o cpimage.o writer_raw.o list.o process.o tcpcp.o $(CHUNK_OBJS)
+OBJECTS = common.o cpimage.o writer_raw.o writer_buffered.o list.o \
+		process.o tcpcp.o $(CHUNK_OBJS)
 
 CFLAGS = -g -Wall -O0
 

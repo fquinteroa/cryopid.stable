@@ -268,7 +268,7 @@ void real_main(int argc, char** argv) {
     image_fd = open_self();
     seek_to_image(image_fd);
 
-    stream_ops = &raw_ops;
+    stream_ops = &buf_ops;
     read_process();
 
     fprintf(stderr, "Something went wrong :(\n");

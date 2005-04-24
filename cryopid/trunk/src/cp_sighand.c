@@ -43,8 +43,12 @@ void read_chunk_sighand(void *fptr, struct cp_sighand *data, int load) {
     struct k_sigaction ksa;
     read_bit(fptr, &sig_num, sizeof(int));
     read_bit(fptr, &ksa, sizeof(struct k_sigaction));
-    syscall_check(set_rt_sigaction(sig_num, &ksa, NULL), 0,
-	    "set_rt_action(%d, ksa, NULL)", sig_num);
+    if (tls_hack && sig_num == SIGSEGV) {
+	install_tls_segv_handler();
+    } else {
+	syscall_check(set_rt_sigaction(sig_num, &ksa, NULL), 0,
+		"set_rt_action(%d, ksa, NULL)", sig_num);
+    }
 }
 
 void write_chunk_sighand(void *fptr, struct cp_sighand *data) {
@@ -69,7 +73,7 @@ void fetch_chunks_sighand(pid_t pid, int flags, struct list *l) {
 	chunk->sighand.sig_num = i;
 	chunk->sighand.ksa = ksa;
 	ksa = NULL;
-	list_add(l, chunk);
+	list_append(l, chunk);
     }
 }
 

@@ -27,6 +27,7 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load) {
     read_bit(fptr, &data->pg_off, sizeof(int));
     read_bit(fptr, &data->inode, sizeof(int));
     data->filename = read_string(fptr, NULL, 1024);
+    /* fprintf(stderr, "Loading 0x%x of size %d\n", data->start, data->length); */
     read_bit(fptr, &data->have_data, sizeof(int));
     if (load) {
 	data->data = (void*)data->start;
@@ -268,7 +269,7 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l) {
 	    debug("     Error parsing map: %s", map_line);
 	    continue;
 	}
-	list_add(l, chunk);
+	list_append(l, chunk);
 	chunk = NULL;
     }
     if (chunk)

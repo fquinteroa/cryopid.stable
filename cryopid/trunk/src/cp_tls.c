@@ -63,7 +63,7 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l) {
 	chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_TLS;
 	chunk->tls.u = u;
-	list_add(l, chunk);
+	list_append(l, chunk);
 	u = NULL;
     }
 }

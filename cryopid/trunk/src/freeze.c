@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
     write_stub(fd);
 
-    stream_ops = &raw_ops; /* FIXME */
+    stream_ops = &buf_ops; /* FIXME */
     write_process(fd, proc_image);
 
     close(fd);
