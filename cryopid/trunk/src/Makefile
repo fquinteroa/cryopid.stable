@@ -25,7 +25,7 @@ stub-image-%.o: stub-%
 
 stub-%: stub.o supervisor.o $(OBJECTS) writer_%.c
 	gcc -static -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -llzo
-	# strip $@
+	strip $@
 	$(DEPAX) $@
 
 freeze: $(OBJECTS) freeze.o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))

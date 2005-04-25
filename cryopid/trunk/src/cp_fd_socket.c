@@ -65,7 +65,6 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
 	return;
     ici = xmalloc(len);
     read_bit(fptr, ici, len);
-    debug("restoring socket");
     syscall_check(s = tcpcp_create(ici), 0, "tcpcp_create");
     if (s != fd) {
 	syscall_check(dup2(s, fd), 0, "dup2");

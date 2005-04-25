@@ -21,6 +21,7 @@ Misc:
 
 Registers:
 + regs
+- only restart certain syscalls
 
 FPU:
 - i387 state

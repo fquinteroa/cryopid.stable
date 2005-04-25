@@ -6,6 +6,7 @@
 #include <sys/ptrace.h>
 #include <asm/ptrace.h>
 #include <string.h>
+#include <errno.h>
 
 #include "cpimage.h"
 #include "cryopid.h"
