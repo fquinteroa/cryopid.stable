@@ -11,15 +11,18 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-void restore_fd_file(int fd, struct cp_file *file) {
+void restore_fd_file(int fd, struct cp_file *file)
+{
 
 }
 
-void save_fd_file(pid_t pid, int flags, int fd, int inode, struct cp_file *file) {
+void save_fd_file(pid_t pid, int flags, int fd, int inode, struct cp_file *file)
+{
 
 }
 
-void read_chunk_fd_file(void *fptr, struct cp_file *cptr, int load, int fd) {
+void read_chunk_fd_file(void *fptr, struct cp_file *cptr, int load, int fd)
+{
     struct cp_file file;
     if (load) {
 	restore_fd_file(fd, &file);
@@ -28,7 +31,8 @@ void read_chunk_fd_file(void *fptr, struct cp_file *cptr, int load, int fd) {
     }
 }
 
-void write_chunk_fd_file(void *fptr, struct cp_file *file) {
+void write_chunk_fd_file(void *fptr, struct cp_file *file)
+{
 
 }
 

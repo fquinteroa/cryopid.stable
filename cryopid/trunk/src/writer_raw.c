@@ -12,7 +12,8 @@ struct raw_data {
     int mode;
 };
 
-static void *raw_init(int fd, int mode) {
+static void *raw_init(int fd, int mode)
+{
     struct raw_data *rd;
     rd = xmalloc(sizeof(struct raw_data));
 
@@ -22,13 +23,15 @@ static void *raw_init(int fd, int mode) {
     return rd;
 }
 
-static void raw_finish(void *fptr) {
+static void raw_finish(void *fptr)
+{
     struct raw_data *rd = fptr;
     close(rd->fd);
     free(rd);
 }
 
-static int raw_read(void *fptr, void *buf, int len) {
+static int raw_read(void *fptr, void *buf, int len)
+{
     int rlen, togo;
     struct raw_data *rd = fptr;
     char *p;
@@ -46,7 +49,8 @@ static int raw_read(void *fptr, void *buf, int len) {
     return len;
 }
 
-static int raw_write(void *fptr, void *buf, int len) {
+static int raw_write(void *fptr, void *buf, int len)
+{
     int wlen;
     struct raw_data *rd = fptr;
 
@@ -54,7 +58,8 @@ static int raw_write(void *fptr, void *buf, int len) {
     return wlen;
 }
 
-static void raw_dup2(void *fptr, int newfd) {
+static void raw_dup2(void *fptr, int newfd)
+{
     struct raw_data *rd = fptr;
 
     if (newfd == rd->fd)

@@ -7,7 +7,8 @@
 char *stub_start;
 int stub_size;
 
-void write_stub(int fd, long heap_start) {
+void write_stub(int fd, long heap_start)
+{
     Elf32_Ehdr *e;
     Elf32_Shdr *s;
     Elf32_Phdr *p;

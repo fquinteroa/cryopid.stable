@@ -12,7 +12,8 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-static int get_termios(pid_t pid, int fd, struct termios *t) {
+static int get_termios(pid_t pid, int fd, struct termios *t)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
@@ -39,18 +40,21 @@ static int get_termios(pid_t pid, int fd, struct termios *t) {
     return 1;
 }
 
-void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console) {
+void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console)
+{
     get_termios(pid, fd, &console->termios); /* FIXME: error checking? */
 }
 
-static void restore_fd_console(int fd, struct cp_console *console) {
+static void restore_fd_console(int fd, struct cp_console *console)
+{
     /* Declare ioctl extern, as including sys/ioctl.h makes compilation unhappy :/ */
     extern int ioctl(int fd, unsigned long req, ...);
     dup2(console_fd, fd);
     ioctl(fd, TCSETS, &console->termios);
 }
 
-void read_chunk_fd_console(void *fptr, struct cp_console *cptr, int load, int fd) {
+void read_chunk_fd_console(void *fptr, struct cp_console *cptr, int load, int fd)
+{
     struct cp_console console;
     read_bit(fptr, &console.termios, sizeof(struct termios));
     if (load) {
@@ -61,7 +65,8 @@ void read_chunk_fd_console(void *fptr, struct cp_console *cptr, int load, int fd
     }
 }
 
-void write_chunk_fd_console(void *fptr, struct cp_console *console) {
+void write_chunk_fd_console(void *fptr, struct cp_console *console)
+{
     write_bit(fptr, &console->termios, sizeof(struct termios));
 }
 

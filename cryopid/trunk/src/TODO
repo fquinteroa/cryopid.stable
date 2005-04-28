@@ -15,6 +15,7 @@ General:
   not use mmap somehow).
 - Checksum unsaved libraries (allow turning off for speed).
 - mmap existing libraries if available, even if in image, to save on memory
+- Better remote syscall support, ala _syscall{0..5}.
 
 Misc:
 - Environment

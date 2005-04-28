@@ -7,7 +7,8 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-static void process_chunk_regs(struct user *user) {
+static void process_chunk_regs(struct user *user)
+{
     char *cp, *code = (char*)TRAMPOLINE_ADDR;
     struct user_regs_struct *r = &user->regs;
 
@@ -66,7 +67,8 @@ static void process_chunk_regs(struct user *user) {
     *(unsigned short*)(cp) = r->cs; cp+= 2; /* jmp cs:foo */
 }
 
-void fetch_chunks_regs(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_regs(pid_t pid, int flags, struct list *l)
+{
     struct cp_chunk *chunk = NULL;
     struct user *user_data;
     long pos;
@@ -97,7 +99,8 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l) {
     list_append(l, chunk);
 }
 
-void read_chunk_regs(void *fptr, struct cp_regs *data, int load) {
+void read_chunk_regs(void *fptr, struct cp_regs *data, int load)
+{
     struct user user, *userp;
     if (data) {
 	data->user_data = xmalloc(sizeof(struct user));
@@ -109,7 +112,8 @@ void read_chunk_regs(void *fptr, struct cp_regs *data, int load) {
 	process_chunk_regs(userp);
 }
 
-void write_chunk_regs(void *fptr, struct cp_regs *data) {
+void write_chunk_regs(void *fptr, struct cp_regs *data)
+{
     write_bit(fptr, data->user_data, sizeof(struct user));
 }
 

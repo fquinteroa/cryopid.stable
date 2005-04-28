@@ -16,7 +16,8 @@
 #define PROTO_TCP	6
 #define PROTO_UDP	17
 
-static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inode) {
+static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inode)
+{
     char line[200], *p;
     int i;
     FILE *f;
@@ -56,7 +57,8 @@ static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inod
     return 1;
 }
 
-static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *tcp) {
+static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *tcp)
+{
     void *ici;
     int len, s;
 
@@ -73,7 +75,8 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
     syscall_check(tcpcp_activate(fd), 0, "tcpcp_activate");
 }
 
-static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp) {
+static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp)
+{
     int len = 0;
     if (!tcp->ici) {
 	write_bit(fptr, &len, sizeof(int));
@@ -85,17 +88,20 @@ static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp) {
 }
 
 void save_fd_socket(pid_t pid, int flags, int fd, int inode,
-		struct cp_socket *socket) {
+		struct cp_socket *socket)
+{
     if (get_tcp_socket(&socket->s_tcp, pid, fd, inode)) {
 	socket->proto = PROTO_TCP;
 	return;
     }
 }
 
-static void restore_fd_socket(int fd, struct cp_socket *socket) {
+static void restore_fd_socket(int fd, struct cp_socket *socket)
+{
 }
 
-void read_chunk_fd_socket(void *fptr, struct cp_socket *cptr, int load, int fd) {
+void read_chunk_fd_socket(void *fptr, struct cp_socket *cptr, int load, int fd)
+{
     struct cp_socket socket;
     read_bit(fptr, &socket.proto, sizeof(int));
     switch (socket.proto) {
@@ -113,7 +119,8 @@ void read_chunk_fd_socket(void *fptr, struct cp_socket *cptr, int load, int fd) 
     }
 }
 
-void write_chunk_fd_socket(void *fptr, struct cp_socket *socket) {
+void write_chunk_fd_socket(void *fptr, struct cp_socket *socket)
+{
     write_bit(fptr, &socket->proto, sizeof(int));
     switch (socket->proto) {
 	case PROTO_TCP:

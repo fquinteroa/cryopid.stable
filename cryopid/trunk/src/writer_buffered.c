@@ -14,7 +14,8 @@ struct buf_data {
     char buffer[BUFSIZ];
 };
 
-static void *buf_init(int fd, int mode) {
+static void *buf_init(int fd, int mode)
+{
     struct buf_data *rd;
 
     rd = xmalloc(sizeof(struct buf_data));
@@ -43,7 +44,8 @@ static void *buf_init(int fd, int mode) {
     return rd;
 }
 
-static void buf_finish(void *fptr) {
+static void buf_finish(void *fptr)
+{
     struct buf_data *rd = fptr;
 
     fflush(rd->f);
@@ -51,7 +53,8 @@ static void buf_finish(void *fptr) {
     free(rd);
 }
 
-static int buf_read(void *fptr, void *buf, int len) {
+static int buf_read(void *fptr, void *buf, int len)
+{
     int rlen, togo;
     struct buf_data *rd = fptr;
     char *p;
@@ -69,7 +72,8 @@ static int buf_read(void *fptr, void *buf, int len) {
     return len;
 }
 
-static int buf_write(void *fptr, void *buf, int len) {
+static int buf_write(void *fptr, void *buf, int len)
+{
     int wlen;
     struct buf_data *rd = fptr;
 
@@ -77,7 +81,8 @@ static int buf_write(void *fptr, void *buf, int len) {
     return wlen;
 }
 
-static void buf_dup2(void *fptr, int newfd) {
+static void buf_dup2(void *fptr, int newfd)
+{
     struct buf_data *rd = fptr;
 
     if (newfd == rd->fd)

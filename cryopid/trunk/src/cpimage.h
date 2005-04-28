@@ -34,7 +34,8 @@ struct k_sigaction {
 };
 
 static inline int set_rt_sigaction(int sig, const struct k_sigaction* ksa,
-	const struct k_sigaction* oksa) {
+	const struct k_sigaction* oksa)
+{
     int ret;
     asm (
 	    "int $0x80"

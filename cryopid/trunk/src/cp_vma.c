@@ -13,7 +13,8 @@
 int extra_prot_flags;
 long scribble_zone = 0; /* somewhere to scribble on in child */
 
-void read_chunk_vma(void *fptr, struct cp_vma *data, int load) {
+void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
+{
     struct cp_vma vma;
     int fd;
 
@@ -57,7 +58,8 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load) {
     }
 }
 
-void write_chunk_vma(void *fptr, struct cp_vma *data) {
+void write_chunk_vma(void *fptr, struct cp_vma *data)
+{
     write_bit(fptr, &data->start, sizeof(int));
     write_bit(fptr, &data->length, sizeof(int));
     write_bit(fptr, &data->prot, sizeof(int));
@@ -72,7 +74,8 @@ void write_chunk_vma(void *fptr, struct cp_vma *data) {
 }
 
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
-	int get_library_data, long *heap_start) {
+	int get_library_data, long *heap_start)
+{
     char *ptr1, *ptr2;
     int dminor, dmajor;
 
@@ -256,7 +259,8 @@ keep_going:
     return 1;
 }
 
-void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start) {
+void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start)
+{
     struct cp_chunk *chunk = NULL;
     char tmp_fn[30];
     char map_line[128];

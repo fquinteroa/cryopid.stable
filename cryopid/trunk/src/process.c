@@ -35,7 +35,8 @@
 #include "cpimage.h"
 #include "list.h"
 
-char* backup_page(pid_t target, void* addr) {
+char* backup_page(pid_t target, void* addr)
+{
     long* page = xmalloc(PAGE_SIZE);
     int i;
     long ret;
@@ -57,7 +58,8 @@ char* backup_page(pid_t target, void* addr) {
     return (char*)page;
 }
 
-int restore_page(pid_t target, void* addr, char* page) {
+int restore_page(pid_t target, void* addr, char* page)
+{
     long *p = (long*)page;
     int i;
     assert(page);
@@ -72,7 +74,8 @@ int restore_page(pid_t target, void* addr, char* page) {
     return 1;
 }
 
-int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n) {
+int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n)
+{
     /* just like memcpy, but copies it into the space of the target pid */
     /* n must be a multiple of 4, or will otherwise be rounded down to be so */
     int i;
@@ -88,7 +91,8 @@ int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n) {
     return 1;
 }
 
-int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n) {
+int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
+{
     /* just like memcpy, but copies it from the space of the target pid */
     /* n must be a multiple of 4, or will otherwise be rounded down to be so */
     int i;
@@ -106,42 +110,59 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n) {
     return 1;
 }
 
-int do_syscall(pid_t pid, struct user_regs_struct *regs) {
+int save_registers(pid_t pid, struct user_regs_struct *r)
+{
+    if (ptrace(PTRACE_GETREGS, pid, NULL, r) < 0) {
+	perror("ptrace getregs");
+	return errno;
+    }
+    return 0;
+}
+
+int restore_registers(pid_t pid, struct user_regs_struct *r)
+{
+    if (ptrace(PTRACE_SETREGS, pid, NULL, r) < 0) {
+	perror("ptrace setregs");
+	return errno;
+    }
+    return 0;
+}
+
+int do_syscall(pid_t pid, struct user_regs_struct *regs)
+{
     long loc;
     struct user_regs_struct orig_regs;
     long old_insn;
     int status, ret;
 
-    if (ptrace(PTRACE_GETREGS, pid, NULL, &orig_regs) < 0) {
-	perror("ptrace getregs");
-	return 0;
-    }
+    if (save_registers(pid, &orig_regs) < 0)
+	return -EACCES;
 
     loc = scribble_zone+0x10;
 
     old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
     if (errno) {
 	perror("ptrace peektext");
-	return 0;
+	return -EACCES;
     }
     //printf("original instruction at 0x%lx was 0x%lx\n", loc, old_insn);
 
     if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
 	perror("ptrace poketext");
-	return 0;
+	return -EACCES;
     }
 
     /* Set up registers for ptrace syscall */
     regs->eip = loc;
     if (ptrace(PTRACE_SETREGS, pid, NULL, regs) < 0) {
 	perror("ptrace setregs");
-	return 0;
+	return -EACCES;
     }
 
     /* Execute call */
     if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
 	perror("ptrace singlestep");
-	return 0;
+	return -EACCES;
     }
     ret = waitpid(pid, &status, 0);
     if (ret == -1) {
@@ -152,24 +173,25 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs) {
     /* Get our new registers */
     if (ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) {
 	perror("ptrace getregs");
-	return 0;
+	return -EACCES;
     }
 
     /* Return everything back to normal */
-    if (ptrace(PTRACE_SETREGS, pid, NULL, &orig_regs) < 0) {
+    if (restore_registers(pid, &orig_regs) < 0) {
 	perror("ptrace getregs");
-	return 0;
+	return -EACCES;
     }
 
     if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
 	perror("ptrace poketext");
-	return 0;
+	return -EACCES;
     }
 
     return 1;
 }
 
-int is_in_syscall(pid_t pid, void* eip) {
+int is_in_syscall(pid_t pid, void* eip)
+{
     long inst;
     inst = ptrace(PTRACE_PEEKDATA, pid, eip-2, 0);
     if (errno) {
@@ -179,7 +201,8 @@ int is_in_syscall(pid_t pid, void* eip) {
     return (inst&0xffff) == 0x80cd;
 }
 
-static int process_is_stopped(pid_t pid) {
+static int process_is_stopped(pid_t pid)
+{
     char buf[30];
     char mode;
     FILE *f;
@@ -191,7 +214,8 @@ static int process_is_stopped(pid_t pid) {
     return mode == 'T';
 }
 
-static void start_ptrace(pid_t pid) {
+static void start_ptrace(pid_t pid)
+{
     long ret;
     int status;
     int stopped;
@@ -217,7 +241,8 @@ static void start_ptrace(pid_t pid) {
     }
 }
 
-static void end_ptrace(pid_t pid) {
+static void end_ptrace(pid_t pid)
+{
     long ret;
 
     ret = ptrace(PTRACE_DETACH, pid, 0, 0);
@@ -227,11 +252,18 @@ static void end_ptrace(pid_t pid) {
     }
 }
 
-void get_process(pid_t pid, int flags, struct list *process_image, long *heap_start) {
+void get_process(pid_t pid, int flags, struct list *process_image, long *heap_start)
+{
     int success = 0;
     char* pagebackup;
+    struct user_regs_struct r;
 
     start_ptrace(pid);
+
+    if (save_registers(pid, &r) < 0) {
+	fprintf(stderr, "Unable to save process's registers!\n");
+	goto out_ptrace;
+    }
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
@@ -254,8 +286,8 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *heap_st
 
     success = 1;
 
-out_restore:
     restore_page(pid, (void*)scribble_zone, pagebackup);
+    restore_registers(pid, &r);
 out_ptrace:
     end_ptrace(pid);
     

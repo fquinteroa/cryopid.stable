@@ -17,7 +17,8 @@
 
 struct stream_ops *stream_ops = NULL;
 
-void usage(char* argv0) {
+void usage(char* argv0)
+{
     fprintf(stderr,
 "Usage: %s [options] <output filename> <pid>\n"
 "\n"
@@ -34,12 +35,14 @@ void usage(char* argv0) {
     exit(1);
 }
 
-void set_default_writer() {
+void set_default_writer()
+{
     extern checker_f __stubs_start;
     __stubs_start(NULL, 1);
 }
 
-void set_writer(char *writer) {
+void set_writer(char *writer)
+{
     extern checker_f __stubs_start, __stubs_end;
     checker_f *p;
     if (stream_ops)
@@ -51,7 +54,8 @@ void set_writer(char *writer) {
     bail("No such writer (%s)!", writer);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     pid_t target_pid;
     struct list proc_image;
     int c;

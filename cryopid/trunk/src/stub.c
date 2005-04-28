@@ -28,7 +28,8 @@ char** real_argv;
 char** real_environ;
 extern char** environ;
 
-void safe_read(int fd, void* dest, size_t count, char* desc) {
+void safe_read(int fd, void* dest, size_t count, char* desc)
+{
     int ret;
     ret = read(fd, dest, count);
     if (ret == -1) {
@@ -42,7 +43,8 @@ void safe_read(int fd, void* dest, size_t count, char* desc) {
 }
 
 /*
-void handle_chunk(struct cp_chunk *chunk) {
+void handle_chunk(struct cp_chunk *chunk)
+{
     switch (chunk->type) {
 	case CP_CHUNK_MISC:
 	    process_chunk_misc(&chunk->misc);
@@ -69,7 +71,8 @@ void handle_chunk(struct cp_chunk *chunk) {
 }
 */
 
-void read_process() {
+void read_process()
+{
     void *fptr;
 
     fptr = stream_ops->init(image_fd, O_RDONLY);
@@ -93,13 +96,15 @@ void read_process() {
     asm("jmp 0x10000");
 }
 
-void* find_top_of_stack() {
+void* find_top_of_stack()
+{
     unsigned int tmp;
     /* Return the top of the current stack page. */
     return (void*)(((long)&tmp + PAGE_SIZE - 1) & ~(PAGE_SIZE-1));
 }
 
-void seek_to_image(int fd) {
+void seek_to_image(int fd)
+{
     Elf32_Ehdr e;
     Elf32_Shdr s;
     int i;
@@ -160,7 +165,8 @@ void seek_to_image(int fd) {
     exit(1);
 }
 
-int open_self() {
+int open_self()
+{
     int fd;
     if (verbosity > 0)
 	fprintf(stderr, "Reading image...\n");
@@ -172,7 +178,8 @@ int open_self() {
     return fd;
 }
 
-void usage(char* argv0) {
+void usage(char* argv0)
+{
     fprintf(stderr,
 "Usage: %s [options]\n"
 "\n"
@@ -193,7 +200,8 @@ void usage(char* argv0) {
 }
 
 void real_main(int argc, char** argv) __attribute__((noreturn));
-void real_main(int argc, char** argv) {
+void real_main(int argc, char** argv)
+{
     image_fd = 42;
     /* See if we're being executed for the second time. If so, read arguments
      * from the file.
@@ -274,7 +282,8 @@ void real_main(int argc, char** argv) {
     exit(1);
 }
 
-int main(int argc, char**argv) {
+int main(int argc, char**argv)
+{
     long amount_used;
     void *stack_ptr;
     void *top_of_old_stack;

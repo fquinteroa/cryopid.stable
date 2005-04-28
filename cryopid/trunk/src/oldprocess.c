@@ -34,7 +34,8 @@
 
 long scribble_zone = 0; /* somewhere to scribble on in child */
 
-char* backup_page(pid_t target, void* addr) {
+char* backup_page(pid_t target, void* addr)
+{
     long* page = malloc(PAGE_SIZE);
     int i;
     long ret;
@@ -56,7 +57,8 @@ char* backup_page(pid_t target, void* addr) {
     return (char*)page;
 }
 
-int restore_page(pid_t target, void* addr, char* page) {
+int restore_page(pid_t target, void* addr, char* page)
+{
     long *p = (long*)page;
     int i;
     assert(page);
@@ -71,7 +73,8 @@ int restore_page(pid_t target, void* addr, char* page) {
     return 1;
 }
 
-int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n) {
+int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n)
+{
     /* just like memcpy, but copies it into the space of the target pid */
     /* n must be a multiple of 4, or will otherwise be rounded down to be so */
     int i;
@@ -87,7 +90,8 @@ int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n) {
     return 1;
 }
 
-int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n) {
+int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
+{
     /* just like memcpy, but copies it from the space of the target pid */
     /* n must be a multiple of 4, or will otherwise be rounded down to be so */
     int i;
@@ -105,7 +109,8 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n) {
     return 1;
 }
 
-void print_status(FILE* f, int status) {
+void print_status(FILE* f, int status)
+{
     if (WIFEXITED(status)) {
 	fprintf(f, "WIFEXITED && WEXITSTATUS == %d\n", WEXITSTATUS(status));
     } else if (WIFSIGNALED(status)) {
@@ -117,7 +122,8 @@ void print_status(FILE* f, int status) {
     }
 }
 
-int do_syscall(pid_t pid, struct user_regs_struct *regs) {
+int do_syscall(pid_t pid, struct user_regs_struct *regs)
+{
     long loc;
     struct user_regs_struct orig_regs;
     long old_insn;
@@ -180,7 +186,8 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs) {
     return 1;
 }
 
-int process_is_stopped(pid_t pid) {
+int process_is_stopped(pid_t pid)
+{
     char buf[128];
     char mode;
     FILE *f;
@@ -192,7 +199,8 @@ int process_is_stopped(pid_t pid) {
     return mode == 'T';
 }
 
-void start_ptrace(pid_t target_pid) {
+void start_ptrace(pid_t target_pid)
+{
     long ret;
     int status;
     int stopped;
@@ -217,7 +225,8 @@ void start_ptrace(pid_t target_pid) {
     }
 }
 
-void end_ptrace(pid_t target_pid) {
+void end_ptrace(pid_t target_pid)
+{
     long ret;
 
     ret = ptrace(PTRACE_DETACH, target_pid, 0, 0);
@@ -227,7 +236,8 @@ void end_ptrace(pid_t target_pid) {
     }
 }
 
-int get_one_vma(pid_t target_pid, char* map_line, struct map_entry_t* m, int get_library_data) {
+int get_one_vma(pid_t target_pid, char* map_line, struct map_entry_t* m, int get_library_data)
+{
     /* Precondition: target_pid must be ptrace_attached */
     char *ptr1, *ptr2;
     int dminor, dmajor;
@@ -394,7 +404,8 @@ int get_one_vma(pid_t target_pid, char* map_line, struct map_entry_t* m, int get
     return 1;
 }
 
-int get_user_data(pid_t target_pid, struct user *user_data) {
+int get_user_data(pid_t target_pid, struct user *user_data)
+{
     long pos;
     int* user_data_ptr = (int*)user_data;
 
@@ -410,7 +421,8 @@ int get_user_data(pid_t target_pid, struct user *user_data) {
     return 1;
 }
 
-int get_i387_data(pid_t target_pid, struct user_i387_struct* i387_data) {
+int get_i387_data(pid_t target_pid, struct user_i387_struct* i387_data)
+{
     /* We have a memory segment. We should retrieve its data */
     fprintf(stderr, "[+] Retrieving FP registers... ");
 
@@ -423,7 +435,8 @@ int get_i387_data(pid_t target_pid, struct user_i387_struct* i387_data) {
     return 1;
 }
 
-off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
+off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
@@ -447,7 +460,8 @@ off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
     return r.eax;
 }
 
-int get_file_contents(char *filename, struct fd_entry_t *out_buf) {
+int get_file_contents(char *filename, struct fd_entry_t *out_buf)
+{
     int fd;
     int length, nread;
     struct stat stat_buf;
@@ -483,7 +497,8 @@ int get_file_contents(char *filename, struct fd_entry_t *out_buf) {
     return length;
 }
 
-struct user_desc *get_tls_info(pid_t pid, int entry_num) {
+struct user_desc *get_tls_info(pid_t pid, int entry_num)
+{
     struct user_desc *u = malloc(sizeof(struct user_desc));
     memset(u, 0, sizeof(struct user_desc));
     u->entry_number = entry_num;
@@ -494,7 +509,8 @@ struct user_desc *get_tls_info(pid_t pid, int entry_num) {
     return u;
 }
 
-int is_in_syscall(pid_t pid, void* eip) {
+int is_in_syscall(pid_t pid, void* eip)
+{
     long inst;
     inst = ptrace(PTRACE_PEEKDATA, pid, eip-2, 0);
     if (errno) {
@@ -504,7 +520,8 @@ int is_in_syscall(pid_t pid, void* eip) {
     return (inst&0xffff) == 0x80cd;
 }
 
-int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa) {
+int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
@@ -534,7 +551,8 @@ int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa) {
     return 1;
 }
 
-int get_termios(pid_t pid, int fd, struct termios *t) {
+int get_termios(pid_t pid, int fd, struct termios *t)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
@@ -561,7 +579,8 @@ int get_termios(pid_t pid, int fd, struct termios *t) {
     return 1;
 }
 
-int get_fcntl_data(pid_t pid, int fd, struct fcntl_data_t *f) {
+int get_fcntl_data(pid_t pid, int fd, struct fcntl_data_t *f)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
@@ -587,7 +606,8 @@ int get_fcntl_data(pid_t pid, int fd, struct fcntl_data_t *f) {
 }
 
 /* FIXME: split this into several functions */
-struct proc_image_t* get_proc_image(pid_t target_pid, int flags) {
+struct proc_image_t* get_proc_image(pid_t target_pid, int flags)
+{
     FILE *f;
     char tmp_fn[1024], fd_filename[1024];
     char map_line[1024];

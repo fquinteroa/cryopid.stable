@@ -20,7 +20,8 @@ static void (*old_segvhandler)(int, siginfo_t*, void*);
 _syscall1(int,set_thread_area,struct user_desc*,u_info);
 #endif
 
-void read_chunk_tls(void *fptr, struct cp_tls *data, int load) {
+void read_chunk_tls(void *fptr, struct cp_tls *data, int load)
+{
     if (load) {
 	struct user_desc u;
 	read_bit(fptr, &u, sizeof(struct user_desc));
@@ -47,7 +48,8 @@ void read_chunk_tls(void *fptr, struct cp_tls *data, int load) {
     read_bit(fptr, data->u, sizeof(struct user_desc));
 }
 
-void fetch_chunks_tls(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_tls(pid_t pid, int flags, struct list *l)
+{
     int i;
     struct cp_chunk *chunk;
     struct user_desc *u = NULL;
@@ -69,11 +71,13 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l) {
     }
 }
 
-void write_chunk_tls(void *fptr, struct cp_tls *data) {
+void write_chunk_tls(void *fptr, struct cp_tls *data)
+{
     write_bit(fptr, data->u, sizeof(struct user_desc));
 }
 
-static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext) {
+static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
+{
     static int rewrite_stage = 0;
     static char* rewrite_start = NULL;
     static char rewrite_backup[12];
@@ -224,7 +228,8 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext) {
     raise(SIGSEGV);
 }
 
-void install_tls_segv_handler() {
+void install_tls_segv_handler()
+{
     struct k_sigaction sa;
     struct k_sigaction old_sa;
 

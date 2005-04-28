@@ -10,7 +10,8 @@
 #define CHECKSUM
 
 #ifdef CHECKSUM
-static int checksum(char *ptr, int len) {
+static int checksum(char *ptr, int len)
+{
     int sum = 0, i;
     for (i = 0; i < len; i++)
 	sum = ((sum << 5) + sum) ^ ptr[i];
@@ -18,7 +19,8 @@ static int checksum(char *ptr, int len) {
 }
 #endif
 
-void read_bit(void *fptr, void *buf, int len) {
+void read_bit(void *fptr, void *buf, int len)
+{
     int rlen;
 
     if (len == 0)
@@ -37,7 +39,8 @@ void read_bit(void *fptr, void *buf, int len) {
 #endif
 }
 
-void write_bit(void *fptr, void *buf, int len) {
+void write_bit(void *fptr, void *buf, int len)
+{
     if (len == 0)
 	return;
 
@@ -49,7 +52,8 @@ void write_bit(void *fptr, void *buf, int len) {
 	bail("Write error!");
 }
 
-char *read_string(void *fptr, char *buf, int maxlen) {
+char *read_string(void *fptr, char *buf, int maxlen)
+{
     static char str_buf[1024];
     int len;
 
@@ -70,7 +74,8 @@ char *read_string(void *fptr, char *buf, int maxlen) {
     return buf;
 }
 
-void write_string(void *fptr, char *buf) {
+void write_string(void *fptr, char *buf)
+{
     int len = 0;
     
     if (buf)
@@ -81,7 +86,8 @@ void write_string(void *fptr, char *buf) {
 	write_bit(fptr, buf, len);
 }
 
-int read_chunk(void *fptr, struct cp_chunk **chunkp, int load) {
+int read_chunk(void *fptr, struct cp_chunk **chunkp, int load)
+{
     struct cp_chunk *chunk = NULL;
     int magic, type;
     
@@ -134,13 +140,15 @@ int read_chunk(void *fptr, struct cp_chunk **chunkp, int load) {
     return 1;
 }
 
-static void write_final_chunk(void *fptr) {
+static void write_final_chunk(void *fptr)
+{
     int magic = CP_CHUNK_MAGIC, type = CP_CHUNK_FINAL;
     write_bit(fptr, &magic, sizeof(int));
     write_bit(fptr, &type, sizeof(int));
 }
 
-void write_chunk(void *fptr, struct cp_chunk *chunk) {
+void write_chunk(void *fptr, struct cp_chunk *chunk)
+{
     int magic = CP_CHUNK_MAGIC;
 
     write_bit(fptr, &magic, sizeof(magic));
@@ -173,7 +181,8 @@ void write_chunk(void *fptr, struct cp_chunk *chunk) {
     }
 }
 
-void write_process(int fd, struct list l) {
+void write_process(int fd, struct list l)
+{
     void *fptr;
     struct item *i;
 

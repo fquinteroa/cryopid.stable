@@ -7,7 +7,8 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-static int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa) {
+static int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
@@ -32,7 +33,8 @@ static int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa) {
     return 1;
 }
 
-void read_chunk_sighand(void *fptr, struct cp_sighand *data, int load) {
+void read_chunk_sighand(void *fptr, struct cp_sighand *data, int load)
+{
     if (!load) {
 	read_bit(fptr, &data->sig_num, sizeof(int));
 	data->ksa = xmalloc(sizeof(struct k_sigaction));
@@ -51,12 +53,14 @@ void read_chunk_sighand(void *fptr, struct cp_sighand *data, int load) {
     }
 }
 
-void write_chunk_sighand(void *fptr, struct cp_sighand *data) {
+void write_chunk_sighand(void *fptr, struct cp_sighand *data)
+{
     write_bit(fptr, &data->sig_num, sizeof(int));
     write_bit(fptr, data->ksa, sizeof(struct k_sigaction));
 }
 
-void fetch_chunks_sighand(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_sighand(pid_t pid, int flags, struct list *l)
+{
     struct cp_chunk *chunk;
     struct k_sigaction *ksa = NULL;
     int i;

@@ -13,7 +13,8 @@
 
 int console_fd;
 
-static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
+static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
@@ -36,7 +37,8 @@ static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence) {
     return r.eax;
 }
 
-static int get_fcntl_status(pid_t pid, int fd) {
+static int get_fcntl_status(pid_t pid, int fd)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
@@ -58,7 +60,8 @@ static int get_fcntl_status(pid_t pid, int fd) {
     return r.eax;
 }
 
-static int get_fcntl_close_on_exec(pid_t pid, int fd) {
+static int get_fcntl_close_on_exec(pid_t pid, int fd)
+{
     struct user_regs_struct r;
 
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
@@ -80,7 +83,8 @@ static int get_fcntl_close_on_exec(pid_t pid, int fd) {
 }
 
 
-void read_chunk_fd(void *fptr, struct cp_fd *data, int load) {
+void read_chunk_fd(void *fptr, struct cp_fd *data, int load)
+{
     int fd, type, mode, close_on_exec, fcntl_status;
     if (!load)
 	abort(); /* FIXME: unsupported as yet. need to rethink this. */
@@ -116,7 +120,8 @@ void read_chunk_fd(void *fptr, struct cp_fd *data, int load) {
 	fcntl(fd, F_SETFL, fcntl_status);
 }
 
-void write_chunk_fd(void *fptr, struct cp_fd *data) {
+void write_chunk_fd(void *fptr, struct cp_fd *data)
+{
     write_bit(fptr, &data->fd, sizeof(int));
     write_bit(fptr, &data->type, sizeof(int));
     write_bit(fptr, &data->mode, sizeof(int));
@@ -140,7 +145,8 @@ void write_chunk_fd(void *fptr, struct cp_fd *data) {
     }
 }
 
-static dev_t get_term_dev(pid_t pid) {
+static dev_t get_term_dev(pid_t pid)
+{
     FILE *f;
     char tmp_fn[80], stat_line[80], *stat_ptr;
     dev_t term_dev = 0;
@@ -164,7 +170,8 @@ static dev_t get_term_dev(pid_t pid) {
     return term_dev;
 }
 
-void fetch_chunks_fd(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
+{
     struct cp_chunk *chunk = NULL;
     struct dirent *fd_dirent;
     struct stat stat_buf;

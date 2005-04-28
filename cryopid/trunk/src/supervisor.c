@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int translate_ioctl(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, int in) {
+int translate_ioctl(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, int in)
+{
     switch(r->ecx) {
 	case TIOCSPGRP:
 	    if (in) {
@@ -32,7 +33,8 @@ int translate_ioctl(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, int 
     return 1;
 }
 
-int translate_syscall(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, int in) {
+int translate_syscall(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, int in)
+{
     int syscall = r->orig_eax;
     //printf("in: %d eax: %d orig_eax: %d\n", in, r->eax, r->orig_eax);
     switch(syscall) {
@@ -47,7 +49,8 @@ int translate_syscall(struct user_regs_struct *r, pid_t oldpid, pid_t newpid, in
     return 1;
 }
 
-void print_status(FILE* f, int status) {
+void print_status(FILE* f, int status)
+{
     if (WIFEXITED(status)) {
 	fprintf(f, "WIFEXITED && WEXITSTATUS == %d\n", WEXITSTATUS(status));
     } else if (WIFSIGNALED(status)) {
@@ -59,7 +62,8 @@ void print_status(FILE* f, int status) {
     }
 }
 
-int start_supervisor(pid_t oldpid) {
+int start_supervisor(pid_t oldpid)
+{
     pid_t pid;
     int status;
     pid = fork();

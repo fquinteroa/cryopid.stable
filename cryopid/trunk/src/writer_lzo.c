@@ -23,7 +23,8 @@ struct lzo_data {
     int bytesin, bytesout; /* for statistics */
 };
 
-static void *lzo_writer_init(int fd, int mode) {
+static void *lzo_writer_init(int fd, int mode)
+{
     struct lzo_data *ld;
     ld = xmalloc(sizeof(struct lzo_data));
 
@@ -53,7 +54,8 @@ static void *lzo_writer_init(int fd, int mode) {
     return ld;
 }
 
-static void lzo_read_uncompressed(void *fptr) {
+static void lzo_read_uncompressed(void *fptr)
+{
     struct lzo_data *ld = fptr;
 
     if (read(ld->fd, &ld->out_len, sizeof(lzo_uint)) != sizeof(lzo_uint))
@@ -65,7 +67,8 @@ static void lzo_read_uncompressed(void *fptr) {
 		ld->out, ld->out_len, strerror(errno));
 }
 
-static void lzo_uncompress_chunk(void *fptr) {
+static void lzo_uncompress_chunk(void *fptr)
+{
     struct lzo_data *ld = fptr;
     int r;
 
@@ -77,7 +80,8 @@ static void lzo_uncompress_chunk(void *fptr) {
     ld->in_used = 0;
 }
 
-static int lzo_writer_read(void *fptr, void *buf, int len) {
+static int lzo_writer_read(void *fptr, void *buf, int len)
+{
     struct lzo_data *ld = fptr;
     int rlen;
     char *p;
@@ -109,7 +113,8 @@ static int lzo_writer_read(void *fptr, void *buf, int len) {
     return len;
 }
 
-static void lzo_compress_chunk(void *fptr) {
+static void lzo_compress_chunk(void *fptr)
+{
     int r;
     struct lzo_data *ld = fptr;
 
@@ -122,7 +127,8 @@ static void lzo_compress_chunk(void *fptr) {
     ld->in_len = 0;
 }
 
-static void lzo_write_compressed(void *fptr) {
+static void lzo_write_compressed(void *fptr)
+{
     struct lzo_data *ld = fptr;
 
     /* Write the size of the chunk first */
@@ -132,7 +138,8 @@ static void lzo_write_compressed(void *fptr) {
 	bail("lzo_write_compressed(): %s", strerror(errno));
 }
 
-static int lzo_writer_write(void *fptr, void *buf, int len) {
+static int lzo_writer_write(void *fptr, void *buf, int len)
+{
     struct lzo_data *ld = fptr;
     int wlen;
     char *p;
@@ -162,7 +169,8 @@ static int lzo_writer_write(void *fptr, void *buf, int len) {
     return len;
 }
 
-static void lzo_writer_finish(void *fptr) {
+static void lzo_writer_finish(void *fptr)
+{
     struct lzo_data *ld = fptr;
 
     if (ld->mode == O_WRONLY && ld->in_len > 0) {
@@ -186,7 +194,8 @@ static void lzo_writer_finish(void *fptr) {
     free(ld);
 }
 
-static void lzo_writer_dup2(void *fptr, int newfd) {
+static void lzo_writer_dup2(void *fptr, int newfd)
+{
     struct lzo_data *ld = fptr;
 
     if (newfd == ld->fd)

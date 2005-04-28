@@ -6,7 +6,8 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load) {
+void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load)
+{
     struct user_i387_struct u;
     if (!load) {
 	data->i387_data = xmalloc(sizeof(struct user_i387_struct));
@@ -18,11 +19,13 @@ void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load) {
     /* FIXME : figure out how to restore i387 state */
 }
 
-void write_chunk_i387_data(void *fptr, struct cp_i387_data *data) {
+void write_chunk_i387_data(void *fptr, struct cp_i387_data *data)
+{
     write_bit(fptr, data->i387_data, sizeof(struct user_i387_struct));
 }
 
-void fetch_chunks_i387_data(pid_t pid, int flags, struct list *l) {
+void fetch_chunks_i387_data(pid_t pid, int flags, struct list *l)
+{
     struct cp_chunk *chunk;
     struct user_i387_struct *i387_data;
 

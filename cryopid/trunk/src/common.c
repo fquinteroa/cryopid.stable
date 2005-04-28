@@ -7,7 +7,8 @@
 
 #include "cryopid.h"
 
-int syscall_check(int retval, int can_be_fake, char* desc, ...) {
+int syscall_check(int retval, int can_be_fake, char* desc, ...)
+{
     va_list va_args;
     /* can_be_fake is true if the syscall might return -1 anyway, and
      * we should simply check errno.
@@ -39,7 +40,8 @@ static void* (*old_malloc_hook)(size_t, const void *);
 void (*__malloc_initialize_hook) (void) = cp_malloc_init_hook;
 
 #include <sys/mman.h>
-static void *cp_malloc_hook(size_t size, const void *caller) {
+static void *cp_malloc_hook(size_t size, const void *caller)
+{
     static long next_free_addr = MALLOC_START;
     int full_len = size + 0x1000 - (size & 0x0fff)?:0x1000;
     if (next_free_addr + full_len > MALLOC_END)
@@ -51,14 +53,16 @@ static void *cp_malloc_hook(size_t size, const void *caller) {
     return p;
 }
 
-static void cp_free_hook(void *ptr, const void *caller) {
+static void cp_free_hook(void *ptr, const void *caller)
+{
     /* Don't worry about freeing it, because our memory segment will be munmap'd
      * before the real binary executes. However this does waste memory if we
      * do lots of mallocing and freeing. FIXME. fix this.
      */
 }
 
-static void cp_malloc_init_hook() {
+static void cp_malloc_init_hook()
+{
     old_malloc_hook = __malloc_hook;
     __malloc_hook = cp_malloc_hook;
     __free_hook = cp_free_hook;
@@ -66,7 +70,8 @@ static void cp_malloc_init_hook() {
 
 #endif
 
-void *xmalloc(int len) {
+void *xmalloc(int len)
+{
     void *p;
     p = malloc(len);
     if (!p)
