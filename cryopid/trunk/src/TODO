@@ -14,6 +14,7 @@ General:
 - Do a better malloc implementation (even if it involves beating libc malloc to
   not use mmap somehow).
 - Checksum unsaved libraries (allow turning off for speed).
+- mmap existing libraries if available, even if in image, to save on memory
 
 Misc:
 - Environment
@@ -49,6 +50,7 @@ File descriptors:
 
 VMAs:
 + memory segments
+- un-mprotect unreadable segments so they can be scraped.
 
 Signal Handlers:
 + sighands
