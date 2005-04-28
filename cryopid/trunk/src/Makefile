@@ -1,5 +1,5 @@
-CHUNK_OBJS = cp_fd.o cp_fd_console.o cp_fd_socket.o cp_i387.o cp_misc.o cp_regs.o \
-		cp_sighand.o cp_tls.o cp_vma.o
+CHUNK_OBJS = cp_fd.o cp_fd_console.o cp_fd_file.o cp_fd_socket.o cp_i387.o \
+		cp_misc.o cp_regs.o cp_sighand.o cp_tls.o cp_vma.o
 OBJECTS = common.c cpimage.o list.o \
 		process.o tcpcp.o $(CHUNK_OBJS)
 STUB_TYPES = raw buffered lzo

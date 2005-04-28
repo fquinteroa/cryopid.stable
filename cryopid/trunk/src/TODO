@@ -13,6 +13,7 @@ General:
 - Licensing on each file.
 - Do a better malloc implementation (even if it involves beating libc malloc to
   not use mmap somehow).
+- Checksum unsaved libraries (allow turning off for speed).
 
 Misc:
 - Environment
@@ -21,7 +22,8 @@ Misc:
 
 Registers:
 + regs
-- only restart certain syscalls
+- only restart certain syscalls ... if in syscall, fail with EINTR ?
+- restore after getting image
 
 FPU:
 - i387 state
@@ -33,11 +35,17 @@ TLS:
 File descriptors:
 - files
 - file contents
++ fcntl state - blocking & close_on_exec
+- fcntl state - locks
 + consoles
 + termios state
 + TCP sockets
+- allow for not killing TCP sockets when saved
+- tcpcpd to firewall TCP connections when being migrated
 - UDP sockets
 - Unix sockets
+- sound devices (ALSA & OSS)
+- large file support
 
 VMAs:
 + memory segments

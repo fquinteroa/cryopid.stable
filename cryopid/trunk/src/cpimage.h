@@ -136,8 +136,10 @@ struct cp_socket {
 struct cp_fd {
 	int fd;
 	int mode;
-	int type;
 	int close_on_exec;
+	int fcntl_status;
+	int offset;
+	int type;
 	union {
 		struct cp_console console;
 		struct cp_file file;
@@ -210,6 +212,11 @@ extern int console_fd;
 void read_chunk_fd_console(void *fptr, struct cp_console *console, int load, int fd);
 void write_chunk_fd_console(void *fptr, struct cp_console *console);
 void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console);
+
+/* cp_fd_file.c */
+void read_chunk_fd_file(void *fptr, struct cp_file *file, int load, int fd);
+void write_chunk_fd_file(void *fptr, struct cp_file *file);
+void save_fd_file(pid_t pid, int flags, int fd, int inode, struct cp_file *file);
 
 /* cp_fd_socket.c */
 void read_chunk_fd_socket(void *fptr, struct cp_socket *socket, int load, int fd);

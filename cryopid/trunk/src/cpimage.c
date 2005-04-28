@@ -10,11 +10,10 @@
 #define CHECKSUM
 
 #ifdef CHECKSUM
-int checksum(char *ptr, int len) {
+static int checksum(char *ptr, int len) {
     int sum = 0, i;
     for (i = 0; i < len; i++)
-	sum += ptr[i];
-	//sum = ((sum << 5) + sum) ^ ptr[i];
+	sum = ((sum << 5) + sum) ^ ptr[i];
     return sum;
 }
 #endif
