@@ -25,7 +25,7 @@ Misc:
 Registers:
 + regs
 - only restart certain syscalls ... if in syscall, fail with EINTR ?
-- restore after getting image
++ restore after getting image
 
 FPU:
 - i387 state
@@ -55,7 +55,8 @@ VMAs:
 
 Signal Handlers:
 + sighands
-
+- process signal masks
+- stopped state
 
 Compression:
 + LZF

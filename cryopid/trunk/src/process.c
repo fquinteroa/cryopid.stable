@@ -110,7 +110,7 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
     return 1;
 }
 
-int save_registers(pid_t pid, struct user_regs_struct *r)
+static int save_registers(pid_t pid, struct user_regs_struct *r)
 {
     if (ptrace(PTRACE_GETREGS, pid, NULL, r) < 0) {
 	perror("ptrace getregs");
@@ -119,7 +119,7 @@ int save_registers(pid_t pid, struct user_regs_struct *r)
     return 0;
 }
 
-int restore_registers(pid_t pid, struct user_regs_struct *r)
+static int restore_registers(pid_t pid, struct user_regs_struct *r)
 {
     if (ptrace(PTRACE_SETREGS, pid, NULL, r) < 0) {
 	perror("ptrace setregs");
@@ -154,10 +154,8 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs)
 
     /* Set up registers for ptrace syscall */
     regs->eip = loc;
-    if (ptrace(PTRACE_SETREGS, pid, NULL, regs) < 0) {
-	perror("ptrace setregs");
+    if (restore_registers(pid, regs) < 0)
 	return -EACCES;
-    }
 
     /* Execute call */
     if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
@@ -171,16 +169,12 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs)
     }
 
     /* Get our new registers */
-    if (ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) {
-	perror("ptrace getregs");
+    if (save_registers(pid, regs) < 0)
 	return -EACCES;
-    }
 
     /* Return everything back to normal */
-    if (restore_registers(pid, &orig_regs) < 0) {
-	perror("ptrace getregs");
+    if (restore_registers(pid, &orig_regs) < 0)
 	return -EACCES;
-    }
 
     if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
 	perror("ptrace poketext");

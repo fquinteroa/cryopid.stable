@@ -139,7 +139,7 @@ struct cp_fd {
 	int mode;
 	int close_on_exec;
 	int fcntl_status;
-	int offset;
+	off_t offset;
 	int type;
 	union {
 		struct cp_console console;

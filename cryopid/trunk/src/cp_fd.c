@@ -56,7 +56,7 @@ static int get_fcntl_status(pid_t pid, int fd)
 	return -1;
     }
 
-    debug("get_fcntl_status of fd %d is %d", fd, r.eax);
+    debug("get_fcntl_status of fd %d is %ld", fd, r.eax);
     return r.eax;
 }
 
@@ -86,6 +86,7 @@ static int get_fcntl_close_on_exec(pid_t pid, int fd)
 void read_chunk_fd(void *fptr, struct cp_fd *data, int load)
 {
     int fd, type, mode, close_on_exec, fcntl_status;
+    off_t offset;
     if (!load)
 	abort(); /* FIXME: unsupported as yet. need to rethink this. */
 
@@ -94,6 +95,7 @@ void read_chunk_fd(void *fptr, struct cp_fd *data, int load)
     read_bit(fptr, &mode, sizeof(int));
     read_bit(fptr, &close_on_exec, sizeof(int));
     read_bit(fptr, &fcntl_status, sizeof(int));
+    read_bit(fptr, &offset, sizeof(off_t));
 
     switch (type) {
 	case CP_CHUNK_FD_CONSOLE:
@@ -118,6 +120,7 @@ void read_chunk_fd(void *fptr, struct cp_fd *data, int load)
 	fcntl(fd, F_SETFD, close_on_exec);
     if (fcntl_status != -1)
 	fcntl(fd, F_SETFL, fcntl_status);
+    lseek(fd, offset, SEEK_SET);
 }
 
 void write_chunk_fd(void *fptr, struct cp_fd *data)
@@ -127,6 +130,7 @@ void write_chunk_fd(void *fptr, struct cp_fd *data)
     write_bit(fptr, &data->mode, sizeof(int));
     write_bit(fptr, &data->close_on_exec, sizeof(int));
     write_bit(fptr, &data->fcntl_status, sizeof(int));
+    write_bit(fptr, &data->offset, sizeof(off_t));
 
     switch (data->type) {
 	case CP_CHUNK_FD_CONSOLE:
@@ -211,6 +215,7 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 
 	chunk->fd.close_on_exec = get_fcntl_close_on_exec(pid, chunk->fd.fd);
 	chunk->fd.fcntl_status = get_fcntl_status(pid, chunk->fd.fd);
+	chunk->fd.offset = get_file_offset(pid, chunk->fd.fd, 0, SEEK_CUR);
 
 	/* This time stat the file/fifo/socket/etc, not the link */
 	if (stat(tmp_fn, &stat_buf) < 0)
