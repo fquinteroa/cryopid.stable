@@ -75,6 +75,7 @@ struct cp_misc {
 
 struct cp_regs {
 	struct user *user_data;
+	int stopped;
 };
 
 struct cp_i387_data {
@@ -189,7 +190,7 @@ void process_chunk_misc(struct cp_misc *data);
 /* cp_regs.c */
 void read_chunk_regs(void *fptr, struct cp_regs *data, int load);
 void write_chunk_regs(void *fptr, struct cp_regs *data);
-void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image);
+void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image, int stopped);
 
 /* cp_i387.c */
 void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load);

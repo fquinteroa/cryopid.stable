@@ -7,7 +7,7 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-static void process_chunk_regs(struct user *user)
+static void process_chunk_regs(struct user *user, int stopped)
 {
     char *cp, *code = (char*)TRAMPOLINE_ADDR;
     struct user_regs_struct *r = &user->regs;
@@ -49,14 +49,24 @@ static void process_chunk_regs(struct user *user)
     }
 
     /* restore registers */
-    *cp++=0xb8;*(long*)(cp) = r->eax; cp+=4; /* mov foo, %eax  */
-    *cp++=0xbb;*(long*)(cp) = r->ebx; cp+=4; /* mov foo, %ebx  */
-    *cp++=0xb9;*(long*)(cp) = r->ecx; cp+=4; /* mov foo, %ecx  */
     *cp++=0xba;*(long*)(cp) = r->edx; cp+=4; /* mov foo, %edx  */
     *cp++=0xbe;*(long*)(cp) = r->esi; cp+=4; /* mov foo, %esi  */
     *cp++=0xbf;*(long*)(cp) = r->edi; cp+=4; /* mov foo, %edi  */
     *cp++=0xbd;*(long*)(cp) = r->ebp; cp+=4; /* mov foo, %ebp  */
     *cp++=0xbc;*(long*)(cp) = r->esp; cp+=4; /* mov foo, %esp  */
+
+    /* raise a SIGSTOP if we were stopped */
+    if (stopped) {
+	*cp++=0xb8;*(long*)(cp) = 37; cp+=4; /* mov $37, %eax (kill) */
+	*cp++=0x31;*cp++=0xdb;               /* xor %ebx, %ebx       */
+	*cp++=0xb9;*(long*)(cp) = 19; cp+=4; /* mov $19, %ecx (SIGSTOP) */
+	*cp++=0xcd;*cp++=0x80;               /* int $0x80 */
+    }
+
+    /* and the rest of the registers we might have just modified */
+    *cp++=0xb8;*(long*)(cp) = r->eax; cp+=4; /* mov foo, %eax  */
+    *cp++=0xbb;*(long*)(cp) = r->ebx; cp+=4; /* mov foo, %ebx  */
+    *cp++=0xb9;*(long*)(cp) = r->ecx; cp+=4; /* mov foo, %ecx  */
 
     *cp++=0x9d; /* pop eflags */
 
@@ -67,7 +77,7 @@ static void process_chunk_regs(struct user *user)
     *(unsigned short*)(cp) = r->cs; cp+= 2; /* jmp cs:foo */
 }
 
-void fetch_chunks_regs(pid_t pid, int flags, struct list *l)
+void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 {
     struct cp_chunk *chunk = NULL;
     struct user *user_data;
@@ -89,32 +99,37 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l)
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, (void*)user_data->regs.eip)) {
 	fprintf(stderr, "[+] Process is probably in syscall. Noting this fact.\n");
-	user_data->regs.eip-=2;
+	/* user_data->regs.eip-=2; */
 	user_data->regs.eax = user_data->regs.orig_eax;
+	user_data->regs.eax = -EINTR;
     }
 
     chunk = xmalloc(sizeof(struct cp_chunk));
     chunk->type = CP_CHUNK_REGS;
     chunk->regs.user_data = user_data;
+    chunk->regs.stopped = stopped;
     list_append(l, chunk);
 }
 
 void read_chunk_regs(void *fptr, struct cp_regs *data, int load)
 {
     struct user user, *userp;
+    int stopped;
     if (data) {
 	data->user_data = xmalloc(sizeof(struct user));
 	userp = data->user_data;
     } else
 	userp = &user;
     read_bit(fptr, userp, sizeof(struct user));
+    read_bit(fptr, &stopped, sizeof(int));
     if (load)
-	process_chunk_regs(userp);
+	process_chunk_regs(userp, stopped);
 }
 
 void write_chunk_regs(void *fptr, struct cp_regs *data)
 {
     write_bit(fptr, data->user_data, sizeof(struct user));
+    write_bit(fptr, &data->stopped, sizeof(int));
 }
 
 /* vim:set ts=8 sw=4 noet: */

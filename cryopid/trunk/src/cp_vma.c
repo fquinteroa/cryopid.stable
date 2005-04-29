@@ -73,6 +73,30 @@ void write_chunk_vma(void *fptr, struct cp_vma *data)
 	write_bit(fptr, data->data, data->length);
 }
 
+static int do_mprotect(pid_t pid, long start, int len, int flags)
+{
+    struct user_regs_struct r;
+
+    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
+	bail("ptrace(GETREGS): %s", strerror(errno));
+
+    /* FIXME: large file support? llseek and offset to 64-bit? */
+    r.eax = __NR_mprotect;
+    r.ebx = start;
+    r.ecx = len;
+    r.edx = flags;
+
+    if (!do_syscall(pid, &r)) return 0;
+
+    /* Error checking! */
+    if (r.eax < 0) {
+	errno = -r.eax;
+	return -1;
+    }
+
+    return r.eax;
+}
+
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	int get_library_data, long *heap_start)
 {
@@ -243,7 +267,7 @@ keep_going:
 	datapos = vma->data;
 	end = (long*)(vma->start + vma->length);
 
-	for(pos = (long*)vma->start; pos < end; pos++, datapos++) {
+	for(pos = (long*)(vma->start); pos < end; pos++, datapos++) {
 	    *datapos = 
 		ptrace(PTRACE_PEEKDATA, pid, pos, datapos);
 	    if (errno != 0)

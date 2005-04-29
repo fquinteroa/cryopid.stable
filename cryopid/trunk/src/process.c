@@ -35,6 +35,8 @@
 #include "cpimage.h"
 #include "list.h"
 
+static int process_was_stopped = 0;
+
 char* backup_page(pid_t target, void* addr)
 {
     long* page = xmalloc(PAGE_SIZE);
@@ -212,9 +214,8 @@ static void start_ptrace(pid_t pid)
 {
     long ret;
     int status;
-    int stopped;
 
-    stopped = process_is_stopped(pid);
+    process_was_stopped = process_is_stopped(pid);
 
     ret = ptrace(PTRACE_ATTACH, pid, 0, 0);
     if (ret == -1) {
@@ -222,7 +223,7 @@ static void start_ptrace(pid_t pid)
 	exit(1);
     }
 
-    if (stopped)
+    if (process_was_stopped)
 	return; /* don't bother waiting for it, we'll just hang */
 
     ret = waitpid(pid, &status, 0);
@@ -276,7 +277,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *heap_st
     fetch_chunks_fd(pid, flags, process_image);
 
     fetch_chunks_sighand(pid, flags, process_image);
-    fetch_chunks_regs(pid, flags, process_image);
+    fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
 
     success = 1;
 
