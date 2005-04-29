@@ -33,7 +33,7 @@ void write_stub(int fd, long heap_start)
 	p->p_memsz = 4;
 	p->p_filesz = 0;
 	p->p_offset = 0;
-	printf("Heap tweakd\n");
+	printf("Heap tweakd at 0x%lx\n", heap_start);
     }
 
     for (i = 0; i < e->e_shnum; i++) {

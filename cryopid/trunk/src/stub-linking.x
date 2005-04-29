@@ -8,6 +8,8 @@ SEARCH_DIR("/usr/i386-linux/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/li
    __DYNAMIC = 0;    */
 SECTIONS
 {
+  . = 0x41414141;
+  random.foo : { LONG(0x90909090) }
   /* Read-only sections, merged into text segment: */
   PROVIDE (__executable_start = 0x00148000); . = 0x00148000 + 0x180;
   .interp         : { *(.interp) }
@@ -171,6 +173,4 @@ SECTIONS
   .debug_varnames  0 : { *(.debug_varnames) }
   /DISCARD/ : { *(.note.GNU-stack) }
   cryopid.image (NOLOAD) : { LONG(0x4D495043) } /* CPIM */
-  . = 0x41414141;
-  random.foo : { LONG(0x90909090) }
 }

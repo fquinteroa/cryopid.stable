@@ -29,10 +29,16 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
     read_bit(fptr, &data->inode, sizeof(int));
     data->filename = read_string(fptr, NULL, 1024);
     /* fprintf(stderr, "Loading 0x%x of size %d\n", data->start, data->length); */
-    read_bit(fptr, &data->have_data, sizeof(int));
+    read_bit(fptr, &data->have_data, sizeof(data->have_data));
+    read_bit(fptr, &data->is_heap, sizeof(data->is_heap));
     if (load) {
 	data->data = (void*)data->start;
 	if (data->have_data) {
+	    if (data->is_heap) {
+		/* Set the heap appropriately */
+		brk(data->data+data->length);
+		assert(sbrk(0) == data->data+data->length);
+	    }
 	    syscall_check((int)mmap((void*)data->data, data->length,
 			data->prot | extra_prot_flags,
 			MAP_ANONYMOUS | MAP_FIXED | data->flags, -1, 0),
@@ -68,7 +74,8 @@ void write_chunk_vma(void *fptr, struct cp_vma *data)
     write_bit(fptr, &data->pg_off, sizeof(int));
     write_bit(fptr, &data->inode, sizeof(int));
     write_string(fptr, data->filename);
-    write_bit(fptr, &data->have_data, sizeof(int));
+    write_bit(fptr, &data->have_data, sizeof(data->have_data));
+    write_bit(fptr, &data->is_heap, sizeof(data->is_heap));
     if (data->have_data)
 	write_bit(fptr, data->data, data->length);
 }
@@ -212,6 +219,7 @@ keep_going:
 	    if (heap_start && strcmp(vma->filename, "[heap]") == 0) {
 		*heap_start = vma->start;
 		vma->flags |= MAP_ANONYMOUS;
+		vma->is_heap = 1;
 	    }
 	} else {
 	    vma->flags |= MAP_ANONYMOUS;

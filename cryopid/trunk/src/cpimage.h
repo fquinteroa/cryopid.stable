@@ -94,7 +94,8 @@ struct cp_vma {
     long pg_off;
     long inode;
     char *filename;
-    int have_data;
+    char have_data;
+    char is_heap;
     void* data; /* length end-start */ /* in file, simply true if is data */
 };
 
