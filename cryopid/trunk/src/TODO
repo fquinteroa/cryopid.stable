@@ -52,11 +52,13 @@ File descriptors:
 VMAs:
 + memory segments
 - un-mprotect unreadable segments so they can be scraped.
+- detect EIO and claim VM_IO, so just mmap on other side.
 
 Signal Handlers:
 + sighands
-- process signal masks
-- stopped state
+- process signal masks (blocked, ignored)
++ stopped state
+- restart alarm
 
 Compression:
 + LZF
