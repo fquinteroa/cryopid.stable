@@ -14,6 +14,8 @@
 #include "cpimage.h"
 #include "process.h"
 
+char tramp[100];
+extern char tramp[] __attribute__((__section__((".tramp"))));
 static int image_fd;
 
 int verbosity = 0;

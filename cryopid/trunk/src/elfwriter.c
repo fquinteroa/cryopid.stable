@@ -7,6 +7,19 @@
 char *stub_start;
 int stub_size;
 
+void write_tramp(char* tramp, int entry)
+{
+    char *p = tramp;
+
+    /* push ebp
+     * movl eax,ebp
+     * movl _NR_foo, eax
+     * int $0x80
+     * pop ebp
+     */
+    *p++=0xb8;*(long*)(p) = __NR_mmap; cp+=4;      /* mov  foo, %eax */
+}
+
 void write_stub(int fd, long heap_start)
 {
     Elf32_Ehdr *e;
