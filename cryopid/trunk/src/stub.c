@@ -16,7 +16,7 @@
 
 char tramp[100];
 extern char tramp[] __attribute__((__section__((".tramp"))));
-static int image_fd;
+static int image_fd, real_fd;
 
 int verbosity = 0;
 int do_pause = 0;
@@ -30,7 +30,7 @@ char** real_argv;
 char** real_environ;
 extern char** environ;
 
-void safe_read(int fd, void* dest, size_t count, char* desc)
+static void safe_read(int fd, void* dest, size_t count, char* desc)
 {
     int ret;
     ret = read(fd, dest, count);
@@ -73,7 +73,7 @@ void handle_chunk(struct cp_chunk *chunk)
 }
 */
 
-void read_process()
+static void read_process()
 {
     void *fptr;
 
@@ -98,14 +98,14 @@ void read_process()
     asm("jmp 0x10000");
 }
 
-void* find_top_of_stack()
+static void* find_top_of_stack()
 {
     unsigned int tmp;
     /* Return the top of the current stack page. */
     return (void*)(((long)&tmp + PAGE_SIZE - 1) & ~(PAGE_SIZE-1));
 }
 
-void seek_to_image(int fd)
+static void seek_to_image(int fd)
 {
     Elf32_Ehdr e;
     Elf32_Shdr s;
@@ -128,7 +128,7 @@ void seek_to_image(int fd)
     }
     
     /* read the string table */
-    syscall_check(lseek(fd, e.e_shoff+(e.e_shstrndx*e.e_shentsize), SEEK_SET), 0, "lseek");
+    syscall_check(lseek(fd, e.e_shoff+(e.e_shstrndx*sizeof(Elf32_Shdr)), SEEK_SET), 0, "lseek");
     safe_read(fd, &s, sizeof(s), "string table section header");
     syscall_check(lseek(fd, s.sh_offset, SEEK_SET), 0, "lseek");
     strtab = xmalloc(s.sh_size);
@@ -138,7 +138,7 @@ void seek_to_image(int fd)
 	long offset;
 
 	syscall_check(
-		lseek(fd, e.e_shoff+(i*e.e_shentsize), SEEK_SET), 0, "lseek");
+		lseek(fd, e.e_shoff+(i*sizeof(Elf32_Shdr)), SEEK_SET), 0, "lseek");
 	safe_read(fd, &s, sizeof(s), "Elf32_Shdr");
 	if (s.sh_type != SHT_PROGBITS || s.sh_name == 0)
 	    continue;
@@ -167,7 +167,7 @@ void seek_to_image(int fd)
     exit(1);
 }
 
-int open_self()
+static int open_self()
 {
     int fd;
     if (verbosity > 0)
@@ -201,8 +201,8 @@ void usage(char* argv0)
     exit(1);
 }
 
-void real_main(int argc, char** argv) __attribute__((noreturn));
-void real_main(int argc, char** argv)
+static void real_main(int argc, char** argv) __attribute__((noreturn));
+static void real_main(int argc, char** argv)
 {
     image_fd = 42;
     /* See if we're being executed for the second time. If so, read arguments
@@ -275,7 +275,7 @@ void real_main(int argc, char** argv)
 	usage(argv[0]);
     }
 
-    image_fd = open_self();
+    image_fd = real_fd;
     seek_to_image(image_fd);
 
     read_process();
@@ -284,7 +284,7 @@ void real_main(int argc, char** argv)
     exit(1);
 }
 
-int main(int argc, char**argv)
+static inline void relocate_stack()
 {
     long amount_used;
     void *stack_ptr;
@@ -292,22 +292,6 @@ int main(int argc, char**argv)
     void *top_of_new_stack;
     void *top_of_our_memory = (void*)MALLOC_END;
     long size_of_new_stack;
-    
-    int i;
-
-    /* Take a copy of our argc/argv and environment below we blow them away */
-    real_argc = argc;
-    real_argv = (char**)xmalloc((sizeof(char*)*argc)+1);
-    for(i=0; i < argc; i++)
-	real_argv[i] = strdup(argv[i]);
-    real_argv[i] = NULL;
-
-    for(i = 0; environ[i]; i++); /* count environment variables */
-    real_environ = xmalloc((sizeof(char*)*i)+1);
-    for(i = 0; environ[i]; i++)
-	*real_environ++ = strdup(environ[i]);
-    *real_environ = NULL;
-    environ = real_environ;
 
     /* Reposition the stack at top_of_old_stack */
     top_of_old_stack = find_top_of_stack();
@@ -334,10 +318,71 @@ int main(int argc, char**argv)
 	    munmap(top_of_our_memory,
 		(top_of_old_stack - top_of_our_memory)),
 		0, "munmap(stack)");
-    
+}
+
+static inline void extract_map(char *s, void **start, long *length)
+{
+    char *p, *p2;
+
+    p = s;
+    debug("HAVE LINE: %s", p);
+    if ((p2 = strchr(p, '-')) == NULL)
+	abort();
+    *p2 = '\0';
+    *start = (void*)strtoul(p, NULL, 16);
+
+    p = p2+1;
+    if ((p2 = strchr(p, ' ')) == NULL)
+	abort();
+    *p2 = '\0';
+    *length = strtoul(p, NULL, 16);
+    *length -= (long)*start;
+}
+
+static inline void get_self_info(void **old_code_start, long *code_len,
+	void **old_data_start, long *data_len)
+{
+    FILE *f;
+    char l[128];
+
+    syscall_check((f = fopen("/proc/self/maps", "r")) != NULL, 0, "fopen");
+
+    fgets(l, 128, f);
+    fgets(l, 128, f);
+
+    fgets(l, 128, f);
+    extract_map(l, old_code_start, code_len);
+    fgets(l, 128, f);
+    extract_map(l, old_data_start, data_len);
+
+    fclose(f);
+}
+
+int main(int argc, char**argv)
+{
+    int i;
+
+    /* Take a copy of our argc/argv and environment below we blow them away */
+    real_argc = argc;
+    real_argv = (char**)xmalloc((sizeof(char*)*argc)+1);
+    for(i=0; i < argc; i++)
+	real_argv[i] = strdup(argv[i]);
+    real_argv[i] = NULL;
+
+    for(i = 0; environ[i]; i++); /* count environment variables */
+    real_environ = xmalloc((sizeof(char*)*i)+1);
+    for(i = 0; environ[i]; i++)
+	*real_environ++ = strdup(environ[i]);
+    *real_environ = NULL;
+    environ = real_environ;
+
+    real_fd = open_self();
+    relocate_stack();
+
     /* Now hope for the best! */
     real_main(real_argc, real_argv);
-    /* should never return */
+
+    /* We should never return */
     return 42;
 }
 

@@ -38,9 +38,10 @@ static inline int set_rt_sigaction(int sig, const struct k_sigaction* ksa,
 {
     int ret;
     asm (
+	    "mov %2,%%ebx\n"
 	    "int $0x80"
 	    : "=a"(ret)
-	    : "a"(__NR_rt_sigaction), "b"(sig),
+	    : "a"(__NR_rt_sigaction), "r"(sig),
 	      "c"(ksa), "d"(oksa), "S"(sizeof(ksa->sa_mask))
 	);
     return ret;

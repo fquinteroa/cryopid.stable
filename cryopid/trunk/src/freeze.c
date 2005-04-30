@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     int flags = 0;
     int get_children = 0;
     int fd;
-    long heap_start;
+    long heap_start = 0;
 
     /* Parse options */
     while (1) {

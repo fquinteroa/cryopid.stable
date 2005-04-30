@@ -37,7 +37,7 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
 	    if (data->is_heap) {
 		/* Set the heap appropriately */
 		brk(data->data+data->length);
-		assert(sbrk(0) == data->data+data->length);
+		/* assert(sbrk(0) == data->data+data->length); */
 	    }
 	    syscall_check((int)mmap((void*)data->data, data->length,
 			data->prot | extra_prot_flags,
@@ -216,12 +216,18 @@ keep_going:
 	    ptr2 = strchr(ptr1, '\n');
 	    if (ptr2) *ptr2 = '\0';
 	    vma->filename = strdup(ptr1);
-	    if (heap_start && strcmp(vma->filename, "[heap]") == 0) {
+	    if (heap_start && !*heap_start && !strcmp(vma->filename, "[heap]")) {
 		*heap_start = vma->start;
 		vma->flags |= MAP_ANONYMOUS;
 		vma->is_heap = 1;
 	    }
 	} else {
+	    if (heap_start && !*heap_start && vma->prot & (PROT_READ|PROT_WRITE)) {
+		/* First rw anonymous segment off the rank - well it looks like
+		 * a heap :) */
+		*heap_start = vma->start;
+		vma->is_heap = 1;
+	    }
 	    vma->flags |= MAP_ANONYMOUS;
 	}
     } else {

@@ -7,26 +7,71 @@
 char *stub_start;
 int stub_size;
 
-void write_tramp(char* tramp, int entry)
+void write_tramp(char* tramp, long old_data_start, long new_data_start,
+	int data_len, long old_code_start, long new_code_start, int code_len,
+	long entry)
 {
+    unsigned short cs;
     char *p = tramp;
 
-    /* push ebp
-     * movl eax,ebp
-     * movl _NR_foo, eax
-     * int $0x80
-     * pop ebp
+    /*
+     * 55                      push   %ebp
+     * bd d2 04 00 00          mov    $0x4d2,%ebp
+     * b8 39 30 00 00          mov    $0x3039,%eax
+     * cd 80                   int    $0x80
+     * 5d                      pop    %ebp
      */
-    *p++=0xb8;*(long*)(p) = __NR_mmap; cp+=4;      /* mov  foo, %eax */
+
+    /* mmap(data_start, data_len, PROT_READ|PROT_WRITE|PROT_EXEC, 
+     *         MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0); */
+    *p++=0xb8;*(long*)(p)=__NR_mmap2; p+=4;      /* mov foo, %eax */
+    *p++=0xbb;*(long*)(p)=new_data_start; p+=4;  /* mov foo, %ebx */
+    *p++=0xb9;*(long*)(p)=data_len; p+=4;        /* mov foo, %ecx */
+    *p++=0xba;*(long*)(p)=PROT_READ|PROT_WRITE; p+=4;
+						 /* mov foo, %edx */
+    *p++=0xbe;*(long*)(p)=MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS; p+=4;
+						 /* mov foo, %esi */
+    *p++=0xcd;*p++=0x80;			 /* int $0x80 */
+
+    /* mmap(data_start, data_len, PROT_READ|PROT_WRITE|PROT_EXEC, 
+     *         MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0); */
+    *p++=0xb8;*(long*)(p)=__NR_mmap2; p+=4;      /* mov foo, %eax */
+    *p++=0xbb;*(long*)(p)=new_code_start; p+=4;  /* mov foo, %ebx */
+    *p++=0xb9;*(long*)(p)=code_len; p+=4;        /* mov foo, %ecx */
+    *p++=0xba;*(long*)(p)=PROT_READ|PROT_WRITE|PROT_EXEC; p+=4;
+						 /* mov foo, %edx */
+    *p++=0xbe;*(long*)(p)=MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS; p+=4;
+						 /* mov foo, %esi */
+    *p++=0xcd;*p++=0x80;			 /* int $0x80 */
+
+    /* now memcpy code */
+    *p++=0xbe;*(long*)(p)=old_code_start; p+=4;  /* mov foo, %esi */
+    *p++=0xbf;*(long*)(p)=new_code_start; p+=4;  /* mov foo, %edi */
+    *p++=0xb9;*(long*)(p)=code_len>>2; p+=4;     /* mov foo, %ecx */
+    *p++=0xf3;*p++=0xa5;                         /* rep movsl */
+
+    /* now memcpy data */
+    *p++=0xbe;*(long*)(p)=old_data_start; p+=4;  /* mov foo, %esi */
+    *p++=0xbf;*(long*)(p)=new_data_start; p+=4;  /* mov foo, %edi */
+    *p++=0xb9;*(long*)(p)=data_len>>2; p+=4;     /* mov foo, %ecx */
+    *p++=0xf3;*p++=0xa5;                         /* rep movsl */
+
+    /* jmp cs:entry */
+    *p++=0xea;*(long*)(p)=entry; p+=4;
+    asm("mov %%cs,%w0":"=q"(cs));
+    *(short*)(p)=cs; p+=2;
 }
 
-void write_stub(int fd, long heap_start)
+void write_stub(int fd, long offset)
 {
     Elf32_Ehdr *e;
     Elf32_Shdr *s;
-    Elf32_Phdr *p;
+    Elf32_Phdr *p, *data, *code;
     char* strtab;
     int i;
+    int got_it;
+
+    offset = 0x8000000;
 
     e = (Elf32_Ehdr*)stub_start;
 
@@ -34,43 +79,59 @@ void write_stub(int fd, long heap_start)
     assert(e->e_shentsize == sizeof(Elf32_Shdr));
     assert(e->e_shstrndx != SHN_UNDEF);
 
+    offset = offset & ~(PAGE_SIZE-1);
+
     s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize)));
     strtab = stub_start+s->sh_offset;
-    
-    for (i = 0; i < e->e_phnum; i++) {
-	p = (Elf32_Phdr*)(stub_start+e->e_phoff+(i*e->e_phentsize));
-	if (p->p_vaddr != 0x41414141)
-	    continue;
 
-	p->p_vaddr = p->p_paddr = heap_start;
-	p->p_memsz = 4;
-	p->p_filesz = 0;
-	p->p_offset = 0;
-	printf("Heap tweakd at 0x%lx\n", heap_start);
-    }
+    e->e_entry += offset;
+    code = (Elf32_Phdr*)(stub_start+e->e_phoff);
+    data = (Elf32_Phdr*)(stub_start+e->e_phoff+sizeof(Elf32_Phdr));
 
+    got_it = 0;
     for (i = 0; i < e->e_shnum; i++) {
 	s = (Elf32_Shdr*)(stub_start+e->e_shoff+(i*e->e_shentsize));
+	s->sh_addr += offset;
+
 	if (s->sh_type != SHT_PROGBITS || s->sh_name == 0)
 	    continue;
 
-	if (memcmp(strtab+s->sh_name, "cryopid.image", 13) != 0)
-	    continue;
-
-	/* check the signature from the stub's linker script */
-	if (memcmp(stub_start+s->sh_offset, "CPIM", 4) != 0) {
-	    fprintf(stderr, "Found an invalid stub! Keeping on trying...\n");
-	    continue;
+	if (memcmp(strtab+s->sh_name, "cryopid.tramp", 13) == 0) {
+	    write_tramp(stub_start+s->sh_offset, 
+		    (code->p_vaddr+offset) & ~(PAGE_SIZE-1),
+		    code->p_vaddr & ~(PAGE_SIZE-1),
+		    (code->p_memsz+PAGE_SIZE-1)&~(PAGE_SIZE-1),
+		    (data->p_vaddr+offset) & ~(PAGE_SIZE-1),
+		    data->p_vaddr & ~(PAGE_SIZE-1),
+		    (data->p_memsz+PAGE_SIZE-1)&~(PAGE_SIZE-1),
+		    e->e_entry);
+	    e->e_entry = s->sh_addr;
 	}
 
-	s->sh_info = IMAGE_VERSION;
-	*(long*)(stub_start+s->sh_offset) = stub_size;
+	if (memcmp(strtab+s->sh_name, "cryopid.image", 13) == 0) {
+	    /* check the signature from the stub's linker script */
+	    if (memcmp(stub_start+s->sh_offset, "CPIM", 4) != 0) {
+		fprintf(stderr, "Found an invalid stub! Still trying...\n");
+		continue;
+	    }
 
-	write(fd, stub_start, stub_size);
-	return;
+	    s->sh_info = IMAGE_VERSION;
+	    *(long*)(stub_start+s->sh_offset) = stub_size;
+	    got_it = 1;
+	}
     }
-    fprintf(stderr, "Couldn't find a valid stub linked in! Bugger.\n");
-    exit(1);
+
+    for (i = 0; i < e->e_phnum; i++) {
+	p = (Elf32_Phdr*)(stub_start+e->e_phoff+(i*e->e_phentsize));
+	p->p_vaddr += offset;
+	p->p_paddr += offset;
+    }
+
+    if (!got_it) {
+	fprintf(stderr, "Couldn't find a valid stub linked in! Bugger.\n");
+	exit(1);
+    }
+    write(fd, stub_start, stub_size);
 }
 
 /* vim:set ts=8 sw=4 noet: */
