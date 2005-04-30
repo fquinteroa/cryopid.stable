@@ -40,22 +40,26 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
 		/* assert(sbrk(0) == data->data+data->length); */
 	    }
 	    syscall_check((int)mmap((void*)data->data, data->length,
-			data->prot | extra_prot_flags,
+			PROT_READ | PROT_WRITE,
 			MAP_ANONYMOUS | MAP_FIXED | data->flags, -1, 0),
 		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
-		    data->data, data->length, data->prot | extra_prot_flags,
+		    data->data, data->length, PROT_READ | PROT_WRITE,
 		    MAP_ANONYMOUS | MAP_FIXED | data->flags);
 	    read_bit(fptr, data->data, data->length);
+	    syscall_check(mprotect((void*)data->data, data->length,
+			data->prot | extra_prot_flags), 0, "mprotect");
 	} else if (data->filename[0]) {
 	    syscall_check(fd = open(data->filename, O_RDONLY), 0,
 		    "open(%s)", data->filename);
 	    syscall_check((int)mmap((void*)data->data, data->length,
-			data->prot | extra_prot_flags,
+			PROT_READ | PROT_WRITE,
 			MAP_FIXED | data->flags, fd, data->pg_off),
 		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, %d, 0x%x)",
-		    data->data, data->length, data->prot | extra_prot_flags,
+		    data->data, data->length, PROT_READ | PROT_WRITE,
 		    MAP_FIXED | data->flags, fd, data->pg_off);
 	    syscall_check(close(fd), 0, "close(%d)", fd);
+	    syscall_check(mprotect((void*)data->data, data->length,
+			data->prot | extra_prot_flags), 0, "mprotect");
 	} else
 	    bail("No source for map 0x%lx (size 0x%lx)", data->start, data->length);
     } else {
@@ -87,7 +91,6 @@ static int do_mprotect(pid_t pid, long start, int len, int flags)
     if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
 	bail("ptrace(GETREGS): %s", strerror(errno));
 
-    /* FIXME: large file support? llseek and offset to 64-bit? */
     r.eax = __NR_mprotect;
     r.ebx = start;
     r.ecx = len;
@@ -109,6 +112,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 {
     char *ptr1, *ptr2;
     int dminor, dmajor;
+    int old_vma_prot = -1;
 
     memset(vma, 0, sizeof(struct cp_vma));
 
@@ -246,6 +250,12 @@ keep_going:
 	    vma->inode,
 	    vma->filename);
 
+    if (vma->prot == 0) {
+	/* we need to modify it to be readable */
+	old_vma_prot = vma->prot;
+	do_mprotect(pid, vma->start, vma->length, PROT_READ);
+    }
+
     /* Decide if it's scribble worthy - find a nice anonymous mapping */
     if (scribble_zone == 0 &&
 	    !vma->filename &&
@@ -253,7 +263,7 @@ keep_going:
 	    !(vma->flags & MAP_SHARED) &&
 	    ((vma->prot & (PROT_READ|PROT_WRITE)) == (PROT_READ|PROT_WRITE))) {
 	scribble_zone = vma->start;
-	printf("[+] Found scribble zone: 0x%lx\n", scribble_zone);
+	debug("[+] Found scribble zone: 0x%lx", scribble_zone);
     }
 
     if (get_library_data) {
@@ -263,7 +273,6 @@ keep_going:
 	free(vma->filename);
 	vma->filename = NULL;
 	vma->inode = 0;
-	vma->prot |= PROT_WRITE;
 
 	vma->flags &= ~MAP_SHARED;
 	vma->flags |= MAP_PRIVATE | MAP_ANONYMOUS;
@@ -292,6 +301,10 @@ keep_going:
 	vma->have_data = 1;
     } else {
 	vma->data = NULL;
+    }
+
+    if (old_vma_prot != -1) {
+	do_mprotect(pid, vma->start, vma->length, old_vma_prot);
     }
 
     return 1;

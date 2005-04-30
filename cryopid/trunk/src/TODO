@@ -24,7 +24,7 @@ Misc:
 
 Registers:
 + regs
-- only restart certain syscalls ... if in syscall, fail with EINTR ?
++ fail syscalls in progress with EINTR (are there any we should restart?)
 + restore after getting image
 
 FPU:
@@ -51,7 +51,7 @@ File descriptors:
 
 VMAs:
 + memory segments
-- un-mprotect unreadable segments so they can be scraped.
++ un-mprotect unreadable segments so they can be scraped.
 - detect EIO and claim VM_IO, so just mmap on other side.
 
 Signal Handlers:
