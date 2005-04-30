@@ -95,7 +95,7 @@ static void read_process()
     if (do_pause)
 	sleep(2);
 
-    asm("jmp 0x10000");
+    asm("jmp "TRAMPOLINE_ADDR_S);
 }
 
 static void* find_top_of_stack()
@@ -299,7 +299,7 @@ static inline void relocate_stack()
 
     amount_used = top_of_old_stack - stack_ptr;
 
-    top_of_new_stack = (void*)0x00200000;
+    top_of_new_stack = (void*)TOP_OF_STACK;
     size_of_new_stack = PAGE_SIZE;
 
     syscall_check( (int)
