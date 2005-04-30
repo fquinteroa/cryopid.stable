@@ -226,8 +226,10 @@ keep_going:
 		vma->is_heap = 1;
 	    }
 	} else {
-	    if (bin_offset && !*bin_offset && vma->prot & (PROT_READ|PROT_WRITE)) {
-		/* First rw anonymous segment off the rank - well it looks like
+	    if (bin_offset && !*bin_offset &&
+		    ((vma->prot & (PROT_READ|PROT_WRITE|PROT_EXEC)) ==
+		     (PROT_READ|PROT_WRITE))) {
+		/* First rw- anonymous segment off the rank - well it looks like
 		 * a heap :) */
 		*bin_offset = vma->start;
 		vma->is_heap = 1;
@@ -250,7 +252,7 @@ keep_going:
 	    vma->inode,
 	    vma->filename);
 
-    if (vma->prot == 0) {
+    if (vma->prot == PROT_NONE) {
 	/* we need to modify it to be readable */
 	old_vma_prot = vma->prot;
 	do_mprotect(pid, vma->start, vma->length, PROT_READ);
@@ -280,11 +282,11 @@ keep_going:
 
     /* Now to get data too */
     if (((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE))
-	    || (vma->prot & MAP_ANONYMOUS)) {
+	    || (vma->flags & MAP_ANONYMOUS)) {
 	/* We have a memory segment. We should retrieve its data */
 	long *pos, *end;
 	long *datapos;
-	/*fprintf(stderr, "Retrieving %ld bytes from segment 0x%lx... ",
+	/* fprintf(stderr, "Retrieving %ld bytes from segment 0x%lx... ",
 		vma->length, vma->start); */
 	vma->data = xmalloc(vma->length);
 	datapos = vma->data;
@@ -297,7 +299,7 @@ keep_going:
 		perror("ptrace(PTRACE_PEEKDATA)");
 	}
 
-	/*fprintf(stderr, "done.\n"); */
+	/* fprintf(stderr, "done.\n"); */
 	vma->have_data = 1;
     } else {
 	vma->data = NULL;
