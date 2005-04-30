@@ -7,47 +7,60 @@
 #include "cryopid.h"
 #include "list.h"
 
-#define CHECKSUM
 
-#ifdef CHECKSUM
-static int checksum(char *ptr, int len)
+unsigned int checksum(char *ptr, int len, unsigned int start)
 {
-    int sum = 0, i;
+    int sum = start, i;
     for (i = 0; i < len; i++)
 	sum = ((sum << 5) + sum) ^ ptr[i];
     return sum;
 }
-#endif
 
 void read_bit(void *fptr, void *buf, int len)
 {
     int rlen;
+    int c1, c2;
 
     if (len == 0)
 	return;
 
-#ifdef CHECKSUM
-    int c;
-    stream_ops->read(fptr, &c, sizeof(c));
-#endif
+    stream_ops->read(fptr, &c1, sizeof(c1));
     rlen = stream_ops->read(fptr, buf, len);
     if (rlen != len)
 	bail("Read error (wanted %d bytes, got %d)!", len, rlen);
-#ifdef CHECKSUM
-    if (c != checksum(buf, len))
-	debug("CHECKSUM MISMATCH (len %d): should be 0x%x, measured 0x%x", len, c, checksum(buf, len));
-#endif
+    c2 = checksum(buf, len, 0);
+    if (c1 != c2)
+	debug("CHECKSUM MISMATCH (len %d): should be 0x%x, measured 0x%x",
+		len, c1, c2);
+}
+
+void discard_bit(void *fptr, int length)
+{
+    static char null[4096];
+    int remaining;
+
+    if (length == 0)
+	return;
+
+    stream_ops->read(fptr, null, sizeof(unsigned int));
+    remaining = length;
+    while (remaining > 0) {
+	int len = sizeof(null);
+	if (len > remaining)
+	    len = remaining;
+	remaining -= stream_ops->read(fptr, null, len);
+    }
 }
 
 void write_bit(void *fptr, void *buf, int len)
 {
+    int c;
+
     if (len == 0)
 	return;
 
-#ifdef CHECKSUM
-    int c = checksum(buf, len);
+    c = checksum(buf, len, 0);
     stream_ops->write(fptr, &c, sizeof(c));
-#endif
     if (stream_ops->write(fptr, buf, len) != len)
 	bail("Write error!");
 }

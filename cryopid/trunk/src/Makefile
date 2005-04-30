@@ -7,7 +7,7 @@ STUB_TYPES = buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
-CFLAGS = -g -Wall -O0 -fPIC
+CFLAGS = -g -Wall -O0 -fpic
 
 CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
@@ -27,7 +27,7 @@ stub-image-%.o: stub-%
 
 stub-%: stub.o supervisor.o $(OBJECTS) writer_%.c
 	@echo Linking $@
-	@gcc -static -fPIC -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -llzo
+	@gcc -static -fpic -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -llzo
 	@strip $@
 	@$(DEPAX) $@
 

@@ -13,8 +13,6 @@ General:
 - Licensing on each file.
 - Do a better malloc implementation (even if it involves beating libc malloc to
   not use mmap somehow).
-- Checksum unsaved libraries (allow turning off for speed).
-- mmap existing libraries if available, even if in image, to save on memory
 - Better remote syscall support, ala _syscall{0..5}.
 
 Misc:
@@ -53,6 +51,10 @@ VMAs:
 + memory segments
 + un-mprotect unreadable segments so they can be scraped.
 - detect EIO and claim VM_IO, so just mmap on other side.
+- deal with non-existant VMAs... warn before continuing?
++ Checksum unsaved libraries
+- Allow turning checksums off for speed.
++ mmap existing libraries if available, even if in image, to save on memory
 
 Signal Handlers:
 + sighands

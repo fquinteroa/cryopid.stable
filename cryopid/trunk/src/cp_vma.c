@@ -30,9 +30,59 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
     data->filename = read_string(fptr, NULL, 1024);
     /* fprintf(stderr, "Loading 0x%x of size %d\n", data->start, data->length); */
     read_bit(fptr, &data->have_data, sizeof(data->have_data));
+    read_bit(fptr, &data->checksum, sizeof(data->checksum));
     read_bit(fptr, &data->is_heap, sizeof(data->is_heap));
     if (load) {
+	fd = -1;
 	data->data = (void*)data->start;
+	int try_local_lib = !(data->prot & PROT_WRITE) && data->have_data && data->filename[0];
+	int need_checksum = try_local_lib || (!data->have_data && data->filename[0]);
+	if (need_checksum) {
+	    int good_lib = 0;
+	    static char buf[4096];
+	    /* check if the checksum matches first, else we may as well use
+	     * that. */
+	    if ((fd = open(data->filename, O_RDONLY)) != -1 &&
+		lseek(fd, data->pg_off, SEEK_SET) == data->pg_off) {
+		unsigned int c = 0;
+		int remaining = data->length;
+		while (remaining > 0) {
+		    int len = sizeof(buf), rlen;
+		    if (len > remaining)
+			len = remaining;
+		    rlen = read(fd, buf, len);
+		    if (rlen == 0)
+			break;
+		    c = checksum(buf, rlen, c);
+		    remaining -= rlen;
+		}
+		if (remaining <= sizeof(buf)) {
+		    /* padded out to a page, compute checksum anyway */
+		    memset(buf, 0, sizeof(buf));
+		    c = checksum(buf, remaining, c);
+		    remaining = 0;
+		}
+		if (remaining == 0) {
+		    if (c == data->checksum) {
+			/* we can just load it from disk, save memory */
+			if (data->have_data) {
+			    data->have_data = 0;
+			    discard_bit(fptr, data->length);
+			}
+			good_lib = 1;
+		    } else {
+			close(fd);
+		    }
+		} else {
+		    close(fd);
+		}
+	    }
+	    if (!data->have_data && data->filename[0] && !good_lib) {
+		bail("Aborting: Local libraries have changed (%s).\n"
+			"Resuming will almost certainly fail!",
+			data->filename);
+	    }
+	}
 	if (data->have_data) {
 	    if (data->is_heap) {
 		/* Set the heap appropriately */
@@ -49,8 +99,9 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
 	    syscall_check(mprotect((void*)data->data, data->length,
 			data->prot | extra_prot_flags), 0, "mprotect");
 	} else if (data->filename[0]) {
-	    syscall_check(fd = open(data->filename, O_RDONLY), 0,
-		    "open(%s)", data->filename);
+	    if (fd == -1)
+		syscall_check(fd = open(data->filename, O_RDONLY), 0,
+			"open(%s)", data->filename);
 	    syscall_check((int)mmap((void*)data->data, data->length,
 			PROT_READ | PROT_WRITE,
 			MAP_FIXED | data->flags, fd, data->pg_off),
@@ -79,6 +130,7 @@ void write_chunk_vma(void *fptr, struct cp_vma *data)
     write_bit(fptr, &data->inode, sizeof(int));
     write_string(fptr, data->filename);
     write_bit(fptr, &data->have_data, sizeof(data->have_data));
+    write_bit(fptr, &data->checksum, sizeof(data->checksum));
     write_bit(fptr, &data->is_heap, sizeof(data->is_heap));
     if (data->have_data)
 	write_bit(fptr, data->data, data->length);
@@ -268,20 +320,9 @@ keep_going:
 	debug("[+] Found scribble zone: 0x%lx", scribble_zone);
     }
 
-    if (get_library_data) {
-	/* forget the fact it came from a file. Pretend it was just
-	 * some arbitrary anonymous writeable VMA.
-	 */
-	free(vma->filename);
-	vma->filename = NULL;
-	vma->inode = 0;
-
-	vma->flags &= ~MAP_SHARED;
-	vma->flags |= MAP_PRIVATE | MAP_ANONYMOUS;
-    }
-
     /* Now to get data too */
-    if (((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE))
+    if (get_library_data ||
+	    ((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE))
 	    || (vma->flags & MAP_ANONYMOUS)) {
 	/* We have a memory segment. We should retrieve its data */
 	long *pos, *end;
@@ -294,15 +335,33 @@ keep_going:
 
 	for(pos = (long*)(vma->start); pos < end; pos++, datapos++) {
 	    *datapos = 
-		ptrace(PTRACE_PEEKDATA, pid, pos, datapos);
+		ptrace(PTRACE_PEEKDATA, pid, pos, NULL);
 	    if (errno != 0)
 		perror("ptrace(PTRACE_PEEKDATA)");
 	}
 
 	/* fprintf(stderr, "done.\n"); */
 	vma->have_data = 1;
+
+	/* and checksum it */
+	vma->checksum = checksum(vma->data, vma->length, 0);
     } else {
+	/* checksum the data anyway */
+	long *pos, *end;
+	unsigned int c = 0, x;
+	end = (long*)(vma->start + vma->length);
+	for(pos = (long*)(vma->start); pos < end; pos++) {
+	    x = ptrace(PTRACE_PEEKDATA, pid, pos, NULL);
+	    if (errno != 0)
+		perror("ptrace(PTRACE_PEEKDATA)");
+	    c = checksum((char*)(&x)+0, 1, c);
+	    c = checksum((char*)(&x)+1, 1, c);
+	    c = checksum((char*)(&x)+2, 1, c);
+	    c = checksum((char*)(&x)+3, 1, c);
+	}
+
 	vma->data = NULL;
+	vma->checksum = c;
     }
 
     if (old_vma_prot != -1) {

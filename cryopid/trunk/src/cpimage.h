@@ -115,6 +115,7 @@ struct cp_vma {
     char *filename;
     char have_data;
     char is_heap;
+    unsigned int checksum;
     void* data; /* length end-start */ /* in file, simply true if is data */
 };
 
@@ -200,7 +201,9 @@ void write_string(void *fptr, char *buf);
 int read_chunk(void *fptr, struct cp_chunk **chunkp, int load);
 void write_chunk(void *fptr, struct cp_chunk *chunk);
 void write_process(int fd, struct list l);
+void discard_bit(void *fptr, int length);
 void get_process(pid_t pid, int flags, struct list *l, long *heap_start);
+unsigned int checksum(char *ptr, int len, unsigned int start);
 
 /* cp_misc.c */
 void read_chunk_misc(void *fptr, struct cp_misc *data, int load);
