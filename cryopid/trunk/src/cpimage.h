@@ -230,7 +230,7 @@ void save_fd_socket(pid_t pid, int flags, int fd, int inode, struct cp_socket *s
 /* cp_vma.c */
 void read_chunk_vma(void *fptr, struct cp_vma *data, int load);
 void write_chunk_vma(void *fptr, struct cp_vma *data);
-void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start);
+void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset);
 extern int extra_prot_flags;
 extern long scribble_zone;
 

@@ -247,7 +247,7 @@ static void end_ptrace(pid_t pid)
     }
 }
 
-void get_process(pid_t pid, int flags, struct list *process_image, long *heap_start)
+void get_process(pid_t pid, int flags, struct list *process_image, long *bin_offset)
 {
     int success = 0;
     char* pagebackup;
@@ -266,7 +266,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *heap_st
     fetch_chunks_tls(pid, flags, process_image);
 
     /* this gives us a scribble zone: */
-    fetch_chunks_vma(pid, flags, process_image, heap_start);
+    fetch_chunks_vma(pid, flags, process_image, bin_offset);
 
     if (!scribble_zone) {
 	fprintf(stderr, "[-] No suitable scribble zone could be found. Aborting.\n");

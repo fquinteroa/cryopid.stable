@@ -26,7 +26,7 @@
 	}
 
 /* elfwriter.c */
-void write_stub(int fd, long heap_start);
+void write_stub(int fd, long offset);
 
 /* common.c */
 int syscall_check(int retval, int can_be_fake, char* desc, ...);

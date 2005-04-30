@@ -105,7 +105,7 @@ static int do_mprotect(pid_t pid, long start, int len, int flags)
 }
 
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
-	int get_library_data, long *heap_start)
+	int get_library_data, long *bin_offset)
 {
     char *ptr1, *ptr2;
     int dminor, dmajor;
@@ -216,16 +216,16 @@ keep_going:
 	    ptr2 = strchr(ptr1, '\n');
 	    if (ptr2) *ptr2 = '\0';
 	    vma->filename = strdup(ptr1);
-	    if (heap_start && !*heap_start && !strcmp(vma->filename, "[heap]")) {
-		*heap_start = vma->start;
+	    if (bin_offset && !*bin_offset && !strcmp(vma->filename, "[heap]")) {
+		*bin_offset = vma->start;
 		vma->flags |= MAP_ANONYMOUS;
 		vma->is_heap = 1;
 	    }
 	} else {
-	    if (heap_start && !*heap_start && vma->prot & (PROT_READ|PROT_WRITE)) {
+	    if (bin_offset && !*bin_offset && vma->prot & (PROT_READ|PROT_WRITE)) {
 		/* First rw anonymous segment off the rank - well it looks like
 		 * a heap :) */
-		*heap_start = vma->start;
+		*bin_offset = vma->start;
 		vma->is_heap = 1;
 	    }
 	    vma->flags |= MAP_ANONYMOUS;
@@ -297,7 +297,7 @@ keep_going:
     return 1;
 }
 
-void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start)
+void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 {
     struct cp_chunk *chunk = NULL;
     char tmp_fn[30];
@@ -312,7 +312,7 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *heap_start)
 	    chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_VMA;
 	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
-		    heap_start)) {
+		    bin_offset)) {
 	    debug("     Error parsing map: %s", map_line);
 	    continue;
 	}

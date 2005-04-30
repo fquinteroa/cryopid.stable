@@ -11,7 +11,6 @@ void write_tramp(char* tramp, long old_data_start, long new_data_start,
 	int data_len, long old_code_start, long new_code_start, int code_len,
 	long entry)
 {
-    unsigned short cs;
     char *p = tramp;
 
     /*
@@ -56,10 +55,9 @@ void write_tramp(char* tramp, long old_data_start, long new_data_start,
     *p++=0xb9;*(long*)(p)=data_len>>2; p+=4;     /* mov foo, %ecx */
     *p++=0xf3;*p++=0xa5;                         /* rep movsl */
 
-    /* jmp cs:entry */
-    *p++=0xea;*(long*)(p)=entry; p+=4;
-    asm("mov %%cs,%w0":"=q"(cs));
-    *(short*)(p)=cs; p+=2;
+    /* and go there! */
+    *p++=0xb8;*(long*)(p)=entry; p+=4;           /* mov foo, %eax */
+    *p++=0xff;*p++=0xe0;                         /* jmp (%eax) */
 }
 
 void write_stub(int fd, long offset)
@@ -71,7 +69,11 @@ void write_stub(int fd, long offset)
     int i;
     int got_it;
 
-    offset = 0x8000000;
+    /* offset is where we'd like to position our heap.
+     * We want to set offset to where the code must begin in order to get
+     * the heap in the right place.
+     * ie, offset = offset - round_to_page(code_len) - round_to_page(data_len)
+     */
 
     e = (Elf32_Ehdr*)stub_start;
 
@@ -79,14 +81,16 @@ void write_stub(int fd, long offset)
     assert(e->e_shentsize == sizeof(Elf32_Shdr));
     assert(e->e_shstrndx != SHN_UNDEF);
 
-    offset = offset & ~(PAGE_SIZE-1);
+    code = (Elf32_Phdr*)(stub_start+e->e_phoff);
+    data = (Elf32_Phdr*)(stub_start+e->e_phoff+sizeof(Elf32_Phdr));
+    offset &= ~(PAGE_SIZE-1);
+    offset -= (code->p_memsz+PAGE_SIZE-1)&~(PAGE_SIZE-1),
+    offset -= (data->p_memsz+PAGE_SIZE-1)&~(PAGE_SIZE-1),
 
     s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize)));
     strtab = stub_start+s->sh_offset;
 
     e->e_entry += offset;
-    code = (Elf32_Phdr*)(stub_start+e->e_phoff);
-    data = (Elf32_Phdr*)(stub_start+e->e_phoff+sizeof(Elf32_Phdr));
 
     got_it = 0;
     for (i = 0; i < e->e_shnum; i++) {
