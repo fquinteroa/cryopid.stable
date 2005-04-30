@@ -24,6 +24,7 @@ static inline int set_thread_area(struct user_desc *u_info) {
 	    "int $0x80"
 	    : "=a" (res)
 	    : "a"(__NR_set_thread_area), "r"((long)(u_info))
+	    : "ebx"
 	    );
     return res;
 }
