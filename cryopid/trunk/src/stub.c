@@ -320,44 +320,6 @@ static inline void relocate_stack()
 		0, "munmap(stack)");
 }
 
-static inline void extract_map(char *s, void **start, long *length)
-{
-    char *p, *p2;
-
-    p = s;
-    debug("HAVE LINE: %s", p);
-    if ((p2 = strchr(p, '-')) == NULL)
-	abort();
-    *p2 = '\0';
-    *start = (void*)strtoul(p, NULL, 16);
-
-    p = p2+1;
-    if ((p2 = strchr(p, ' ')) == NULL)
-	abort();
-    *p2 = '\0';
-    *length = strtoul(p, NULL, 16);
-    *length -= (long)*start;
-}
-
-static inline void get_self_info(void **old_code_start, long *code_len,
-	void **old_data_start, long *data_len)
-{
-    FILE *f;
-    char l[128];
-
-    syscall_check((f = fopen("/proc/self/maps", "r")) != NULL, 0, "fopen");
-
-    fgets(l, 128, f);
-    fgets(l, 128, f);
-
-    fgets(l, 128, f);
-    extract_map(l, old_code_start, code_len);
-    fgets(l, 128, f);
-    extract_map(l, old_data_start, data_len);
-
-    fclose(f);
-}
-
 int main(int argc, char**argv)
 {
     int i;
