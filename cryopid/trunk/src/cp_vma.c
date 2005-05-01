@@ -279,9 +279,9 @@ keep_going:
 	    }
 	} else {
 	    if (bin_offset && !*bin_offset &&
-		    ((vma->prot & (PROT_READ|PROT_WRITE|PROT_EXEC)) ==
+		    ((vma->prot & (PROT_READ|PROT_WRITE)) ==
 		     (PROT_READ|PROT_WRITE))) {
-		/* First rw- anonymous segment off the rank - well it looks like
+		/* First rw* anonymous segment off the rank - well it looks like
 		 * a heap :) */
 		*bin_offset = vma->start;
 		vma->is_heap = 1;
