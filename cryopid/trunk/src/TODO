@@ -14,6 +14,8 @@ General:
 - Do a better malloc implementation (even if it involves beating libc malloc to
   not use mmap somehow).
 - Better remote syscall support, ala _syscall{0..5}.
+- Split out write vs read code. Why isn't the linker smart enough to do this?
+- Figure a sane way of building & linking against uclibc.
 
 Misc:
 - Environment
