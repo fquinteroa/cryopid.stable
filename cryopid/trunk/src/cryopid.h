@@ -52,22 +52,13 @@ int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
 #ifdef COMPILING_STUB
 #define declare_writer(s, x, desc) struct stream_ops *stream_ops = &x
 #else
-extern char *stub_start;
-extern int stub_size;
+#define declare_writer(s, x, desc) \
+    extern char *_binary_stub_##s##_start; \
+    extern int _binary_stub_##s##_size; \
+    struct stream_ops *stream_ops = &x; \
+    char *stub_start = (char*)&_binary_stub_##s##_start; \
+    int stub_size = (int)&_binary_stub_##s##_size
 
-typedef int (*checker_f)(char*, int);
-#define declare_writer(s, sops, desc) \
-    static int check_writer(char *s, int force) { \
-	extern char *_binary_stub_##s##_start; \
-	extern int _binary_stub_##s##_size; \
-	if (!force && strcmp(s, #s)) \
-	    return 0; \
-	stream_ops = &sops; \
-	stub_start = (char*)&_binary_stub_##s##_start; \
-	stub_size = (int)&_binary_stub_##s##_size; \
-	return 1; \
-    } \
-    static checker_f f __attribute__((__section__(".stubs.list"))) = check_writer
 #endif
 
 #endif /* _CRYOPID_H_ */

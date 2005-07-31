@@ -90,10 +90,10 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
 		/* assert(sbrk(0) == data->data+data->length); */
 	    }
 	    syscall_check((int)mmap((void*)data->data, data->length,
-			PROT_READ | PROT_WRITE,
+			data->prot,
 			MAP_ANONYMOUS | MAP_FIXED | data->flags, -1, 0),
 		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
-		    data->data, data->length, PROT_READ | PROT_WRITE,
+		    data->data, data->length, data->prot,
 		    MAP_ANONYMOUS | MAP_FIXED | data->flags);
 	    read_bit(fptr, data->data, data->length);
 	    syscall_check(mprotect((void*)data->data, data->length,
@@ -103,10 +103,10 @@ void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
 		syscall_check(fd = open(data->filename, O_RDONLY), 0,
 			"open(%s)", data->filename);
 	    syscall_check((int)mmap((void*)data->data, data->length,
-			PROT_READ | PROT_WRITE,
+			data->prot,
 			MAP_FIXED | data->flags, fd, data->pg_off),
 		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, %d, 0x%x)",
-		    data->data, data->length, PROT_READ | PROT_WRITE,
+		    data->data, data->length, data->prot,
 		    MAP_FIXED | data->flags, fd, data->pg_off);
 	    syscall_check(close(fd), 0, "close(%d)", fd);
 	    syscall_check(mprotect((void*)data->data, data->length,

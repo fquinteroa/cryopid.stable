@@ -95,7 +95,7 @@ static void read_process()
     if (do_pause)
 	sleep(2);
 
-    asm("jmp "TRAMPOLINE_ADDR_S);
+    asm("jmp *%%eax\n" : : "a"(TRAMPOLINE_ADDR));
 }
 
 static void* find_top_of_stack()

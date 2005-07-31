@@ -207,7 +207,7 @@ static void lzo_writer_dup2(void *fptr, int newfd)
     ld->fd = newfd;
 }
 
-static struct stream_ops lzo_ops = {
+struct stream_ops lzo_ops = {
     .init = lzo_writer_init,
     .read = lzo_writer_read,
     .write = lzo_writer_write,

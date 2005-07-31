@@ -4,8 +4,8 @@
 #include <fcntl.h>
 #include "process.h"
 
-char *stub_start;
-int stub_size;
+extern char *stub_start;
+extern int stub_size;
 
 void write_tramp(char* tramp, long old_data_start, long new_data_start,
 	int data_len, long old_code_start, long new_code_start, int code_len,

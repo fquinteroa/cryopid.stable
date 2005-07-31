@@ -103,7 +103,7 @@ static void buf_dup2(void *fptr, int newfd)
     setvbuf(rd->f, rd->buffer, _IOFBF, BUFSIZ);
 }
 
-static struct stream_ops buf_ops = {
+struct stream_ops buf_ops = {
     .init = buf_init,
     .read = buf_read,
     .write = buf_write,

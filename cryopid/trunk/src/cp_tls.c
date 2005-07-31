@@ -1,6 +1,7 @@
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <signal.h>
+#include <asm/ldt.h>
 #include <asm/ucontext.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
@@ -15,19 +16,8 @@ int tls_hack = 0;
 
 static int tls_base_address;
 static void (*old_segvhandler)(int, siginfo_t*, void*);
-
 #if !set_thread_area
-static inline int set_thread_area(struct user_desc *u_info) {
-    long res;
-    __asm__ volatile (
-	    "mov %2, %%ebx\n"
-	    "int $0x80"
-	    : "=a" (res)
-	    : "a"(__NR_set_thread_area), "r"((long)(u_info))
-	    : "ebx"
-	    );
-    return res;
-}
+extern int set_thread_area(struct user_desc *u_info);
 #endif
 
 void read_chunk_tls(void *fptr, struct cp_tls *data, int load)
@@ -89,8 +79,8 @@ void write_chunk_tls(void *fptr, struct cp_tls *data)
 static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 {
     static int rewrite_stage = 0;
-    static char* rewrite_start = NULL;
-    static char rewrite_backup[12];
+    static unsigned char* rewrite_start = NULL;
+    static unsigned char rewrite_backup[12];
 
     struct ucontext *uc = (struct ucontext*)ucontext;
     unsigned char *pt = (unsigned char*)uc->uc_mcontext.eip;

@@ -15,7 +15,7 @@
 #include "process.h"
 #include "list.h"
 
-struct stream_ops *stream_ops = NULL;
+extern struct stream_ops *stream_ops;
 
 void usage(char* argv0)
 {
@@ -33,25 +33,6 @@ void usage(char* argv0)
 "This program is part of CryoPID. http://cryopid.berlios.de/\n",
     argv0);
     exit(1);
-}
-
-void set_default_writer()
-{
-    extern checker_f __stubs_start;
-    __stubs_start(NULL, 1);
-}
-
-void set_writer(char *writer)
-{
-    extern checker_f __stubs_start, __stubs_end;
-    checker_f *p;
-    if (stream_ops)
-	bail("Multiple writers specified!");
-    for (p = &__stubs_start; p < &__stubs_end; p++) {
-	if ((*p)(writer, 0))
-	    return;
-    }
-    bail("No such writer (%s)!", writer);
 }
 
 int main(int argc, char** argv)
@@ -88,9 +69,11 @@ int main(int argc, char** argv)
 	    case 'c':
 		get_children = 1;
 		break;
+	    /*
 	    case 'w':
 		set_writer(optarg);
 		break;
+		*/
 	    case '?':
 		/* invalid option */
 		usage(argv[0]);
@@ -103,8 +86,7 @@ int main(int argc, char** argv)
 	return 1;
     }
 
-    if (!stream_ops)
-	set_default_writer();
+    assert(stream_ops != NULL);
 
     target_pid = atoi(argv[optind+1]);
     if (target_pid <= 1) {

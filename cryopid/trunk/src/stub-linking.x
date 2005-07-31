@@ -3,7 +3,7 @@ OUTPUT_FORMAT("elf32-i386", "elf32-i386",
 	      "elf32-i386")
 OUTPUT_ARCH(i386)
 ENTRY(_start)
-SEARCH_DIR("/usr/i386-linux/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
+SEARCH_DIR("/usr/i486-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
 /* Do we need any of these for elf?
    __DYNAMIC = 0;    */
 SECTIONS
@@ -25,6 +25,8 @@ SECTIONS
   .rela.fini      : { *(.rela.fini) }
   .rel.rodata     : { *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*) }
   .rela.rodata    : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) }
+  .rel.data.rel.ro   : { *(.rel.data.rel.ro*) }
+  .rela.data.rel.ro   : { *(.rel.data.rel.ro*) }
   .rel.data       : { *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*) }
   .rela.data      : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) }
   .rel.tdata	  : { *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*) }
@@ -49,6 +51,7 @@ SECTIONS
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
+    KEEP (*(.text.*personality*))
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
   } =0x90909090
@@ -63,34 +66,31 @@ SECTIONS
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
   .eh_frame_hdr : { *(.eh_frame_hdr) }
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
+  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN (0x1000) - ((0x1000 - .) & (0x1000 - 1)); . = DATA_SEGMENT_ALIGN (0x1000, 0x1000);
+  /* Exception handling  */
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
+  .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
+  /* Thread Local Storage sections  */
+  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) }
+  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
   /* Ensure the __preinit_array_start label is properly aligned.  We
      could instead move the label definition inside the section, but
      the linker would then create the section even if it turns out to
      be empty, which isn't pretty.  */
   . = ALIGN(32 / 8);
   PROVIDE (__preinit_array_start = .);
-  .preinit_array     : { *(.preinit_array) }
+  .preinit_array     : { KEEP (*(.preinit_array)) }
   PROVIDE (__preinit_array_end = .);
   PROVIDE (__init_array_start = .);
-  .init_array     : { *(.init_array) }
+  .init_array     : { KEEP (*(.init_array)) }
   PROVIDE (__init_array_end = .);
   PROVIDE (__fini_array_start = .);
-  .fini_array     : { *(.fini_array) }
+  .fini_array     : { KEEP (*(.fini_array)) }
   PROVIDE (__fini_array_end = .);
-  .data           :
-  {
-    *(.data .data.* .gnu.linkonce.d.*)
-    SORT(CONSTRUCTORS)
-  }
-  .data1          : { *(.data1) }
-  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) }
-  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
-  .eh_frame       : { KEEP (*(.eh_frame)) }
-  .gcc_except_table   : { *(.gcc_except_table) }
-  .dynamic        : { *(.dynamic) }
   .ctors          :
   {
     /* gcc uses crtbegin.o to find the start of
@@ -119,7 +119,18 @@ SECTIONS
     KEEP (*(.dtors))
   }
   .jcr            : { KEEP (*(.jcr)) }
-  .got            : { *(.got.plt) *(.got) }
+  .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
+  .dynamic        : { *(.dynamic) }
+  .got            : { *(.got) }
+  . = DATA_SEGMENT_RELRO_END (12, .);
+  .got.plt        : { *(.got.plt) }
+  .data           :
+  {
+    *(.data .data.* .gnu.linkonce.d.*)
+    KEEP (*(.gnu.linkonce.d.*personality*))
+    SORT(CONSTRUCTORS)
+  }
+  .data1          : { *(.data1) }
   _edata = .;
   PROVIDE (edata = .);
   __bss_start = .;
