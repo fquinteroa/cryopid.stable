@@ -312,6 +312,7 @@ static inline void relocate_stack()
 	    top_of_old_stack - size_of_new_stack, /* FIX ME */
 	    size_of_new_stack);
     __asm__ ("addl %0, %%esp" : : "a"(top_of_new_stack - top_of_old_stack));
+    __asm__ ("addl %0, %%ebp" : : "a"(top_of_new_stack - top_of_old_stack));
 
     /* unmap absolutely everything above us! */
     syscall_check(
