@@ -10,6 +10,7 @@
 struct buf_data {
     FILE* f; /* So we can use buffering */
     int fd;
+    int offset;
     char *mode;
     char buffer[BUFSIZ];
 };
@@ -41,6 +42,8 @@ static void *buf_init(int fd, int mode)
 
     rd->fd = fd;
 
+    rd->offset = 0;
+
     return rd;
 }
 
@@ -69,6 +72,9 @@ static int buf_read(void *fptr, void *buf, int len)
 	p += rlen;
 	togo -= rlen;
     }
+
+    rd->offset += len;
+
     return len;
 }
 
@@ -79,6 +85,13 @@ static int buf_write(void *fptr, void *buf, int len)
 
     wlen = fwrite(buf, 1, len, rd->f);
     return wlen;
+}
+
+static long buf_ftell(void *fptr)
+{
+    struct buf_data *rd = fptr;
+
+    return rd->offset;
 }
 
 static void buf_dup2(void *fptr, int newfd)
@@ -108,6 +121,7 @@ struct stream_ops buf_ops = {
     .read = buf_read,
     .write = buf_write,
     .finish = buf_finish,
+    .ftell = buf_ftell,
     .dup2 = buf_dup2,
 };
 

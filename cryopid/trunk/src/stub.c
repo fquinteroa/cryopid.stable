@@ -44,35 +44,6 @@ static void safe_read(int fd, void* dest, size_t count, char* desc)
     }
 }
 
-/*
-void handle_chunk(struct cp_chunk *chunk)
-{
-    switch (chunk->type) {
-	case CP_CHUNK_MISC:
-	    process_chunk_misc(&chunk->misc);
-	    break;
-	case CP_CHUNK_REGS:
-	    process_chunk_regs(&chunk->regs);
-	    break;
-	case CP_CHUNK_I387_DATA:
-	    process_chunk_i387_data(&chunk->i387_data);
-	    break;
-	case CP_CHUNK_TLS:
-	    process_chunk_tls(&chunk->tls);
-	    break;
-	case CP_CHUNK_FD:
-	    process_chunk_fd(&chunk->fd);
-	    break;
-	case CP_CHUNK_VMA:
-	    process_chunk_vma(&chunk->vma);
-	    break;
-	case CP_CHUNK_SIGHAND:
-	    process_chunk_sighand(&chunk->sighand);
-	    break;
-    }
-}
-*/
-
 static void read_process()
 {
     void *fptr;
@@ -82,7 +53,7 @@ static void read_process()
 	bail("Unable to initialize reader.");
 
     /* Read and process all chunks. */
-    while (read_chunk(fptr, NULL, 1));
+    while (read_chunk(fptr, ACTION_LOAD | ((verbosity>0)?ACTION_PRINT:0)));
 
     /* Cleanup the input file. */
     stream_ops->finish(fptr);
@@ -163,7 +134,7 @@ static void seek_to_image(int fd)
 
 	return;
     }
-    fprintf(stderr, "Program image not found! Bugger.\n");
+    fprintf(stderr, "Program image not found!\n");
     exit(1);
 }
 
@@ -286,18 +257,15 @@ static void real_main(int argc, char** argv)
 
 static inline void relocate_stack()
 {
-    long amount_used;
-    void *stack_ptr;
     void *top_of_old_stack;
     void *top_of_new_stack;
     void *top_of_our_memory = (void*)MALLOC_END;
+    void *top_of_all_memory;
     long size_of_new_stack;
 
     /* Reposition the stack at top_of_old_stack */
     top_of_old_stack = find_top_of_stack();
-    stack_ptr = &stack_ptr;
-
-    amount_used = top_of_old_stack - stack_ptr;
+    top_of_all_memory = (void*)((((unsigned long)top_of_old_stack + GB)/GB)*GB);
 
     top_of_new_stack = (void*)TOP_OF_STACK;
     size_of_new_stack = PAGE_SIZE;
@@ -317,8 +285,9 @@ static inline void relocate_stack()
     /* unmap absolutely everything above us! */
     syscall_check(
 	    munmap(top_of_our_memory,
-		(top_of_old_stack - top_of_our_memory)),
+		(top_of_all_memory - top_of_our_memory)),
 		0, "munmap(stack)");
+    system("cat /proc/$PPID/maps");
 }
 
 int main(int argc, char**argv)

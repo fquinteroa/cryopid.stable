@@ -10,6 +10,7 @@
 struct raw_data {
     int fd;
     int mode;
+    int offset;
 };
 
 static void *raw_init(int fd, int mode)
@@ -19,6 +20,7 @@ static void *raw_init(int fd, int mode)
 
     rd->fd = fd;
     rd->mode = mode;
+    rd->offset = 0;
 
     return rd;
 }
@@ -46,6 +48,9 @@ static int raw_read(void *fptr, void *buf, int len)
 	p += rlen;
 	togo -= rlen;
     }
+
+    rd->offset += len;
+
     return len;
 }
 
@@ -56,6 +61,12 @@ static int raw_write(void *fptr, void *buf, int len)
 
     wlen = write(rd->fd, buf, len);
     return wlen;
+}
+
+static long raw_ftell(void *fptr)
+{
+    struct raw_data *rd = fptr;
+    return rd->offset;
 }
 
 static void raw_dup2(void *fptr, int newfd)
@@ -71,11 +82,12 @@ static void raw_dup2(void *fptr, int newfd)
     rd->fd = newfd;
 }
 
-static struct stream_ops raw_ops = {
+struct stream_ops raw_ops = {
     .init = raw_init,
     .read = raw_read,
     .write = raw_write,
     .finish = raw_finish,
+    .ftell = raw_ftell,
     .dup2 = raw_dup2,
 };
 

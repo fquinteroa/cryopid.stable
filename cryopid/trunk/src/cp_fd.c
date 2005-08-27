@@ -11,6 +11,14 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
+/* Some possibly not declared defines */
+#ifndef O_DIRECT
+#define O_DIRECT	 040000	/* direct disk access hint */
+#endif /* O_DIRECT */
+#ifndef O_NOATIME
+#define O_NOATIME	01000000
+#endif /* O_NOATIME */
+
 int console_fd;
 
 static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence)
@@ -82,45 +90,97 @@ static int get_fcntl_close_on_exec(pid_t pid, int fd)
     return r.eax;
 }
 
-
-void read_chunk_fd(void *fptr, struct cp_fd *data, int load)
+static void read_chunk_fd_maxfd(void *fptr, struct cp_fd *fd, int action)
 {
-    int fd, type, mode, close_on_exec, fcntl_status;
-    off_t offset;
-    if (!load)
-	abort(); /* FIXME: unsupported as yet. need to rethink this. */
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "highest FD num is %d", fd->fd);
 
-    read_bit(fptr, &fd, sizeof(int));
-    read_bit(fptr, &type, sizeof(int));
-    read_bit(fptr, &mode, sizeof(int));
-    read_bit(fptr, &close_on_exec, sizeof(int));
-    read_bit(fptr, &fcntl_status, sizeof(int));
-    read_bit(fptr, &offset, sizeof(off_t));
+    if (!(action & ACTION_LOAD))
+	return;
 
-    switch (type) {
+    /* No read routines needed, however, we do need to move our fd */
+    stream_ops->dup2(fptr, fd->fd+1);
+
+    /* And make sure we can get a console on max_fd+2 in case we need it */
+    console_fd = fd->fd+2;
+    dup2(0, console_fd);
+    fclose(stdin);
+    fclose(stdout);
+    fclose(stderr);
+
+    stdin = stdout = stderr = fdopen(console_fd, "r+");
+}
+
+void read_chunk_fd(void *fptr, int action)
+{
+    struct cp_fd fd;
+
+    read_bit(fptr, &fd.fd, sizeof(int));
+    read_bit(fptr, &fd.type, sizeof(int));
+    read_bit(fptr, &fd.mode, sizeof(int));
+    read_bit(fptr, &fd.close_on_exec, sizeof(int));
+    read_bit(fptr, &fd.fcntl_status, sizeof(int));
+    read_bit(fptr, &fd.offset, sizeof(off_t));
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "FD %d (%s) ", fd.fd,
+		(fd.mode == O_RDONLY)?"r":
+		(fd.mode == O_WRONLY)?"w":
+		(fd.mode == O_RDWR)?"rw":
+		"-");
+
+    switch (fd.type) {
 	case CP_CHUNK_FD_CONSOLE:
-	    read_chunk_fd_console(fptr, NULL, load, fd);
+	    read_chunk_fd_console(fptr, &fd, action);
 	    break;
 	case CP_CHUNK_FD_MAXFD:
-	    /* No read routines needed, however, we do need to move our fd */
-	    stream_ops->dup2(fptr, fd+1);
-	    /* And make sure we can get a console on max_fd+2 in case we need it */
-	    console_fd = fd+2;
-	    dup2(0, console_fd);
+	    read_chunk_fd_maxfd(fptr, &fd, action);
 	    break;
 	case CP_CHUNK_FD_FILE:
+	    read_chunk_fd_file(fptr, &fd, action);
 	    break;
 	case CP_CHUNK_FD_SOCKET:
-	    read_chunk_fd_socket(fptr, NULL, load, fd);
+	    read_chunk_fd_socket(fptr, &fd, action);
 	    break;
 	default:
-	    bail("Invalid FD chunk type %d!", type);
+	    bail("Invalid FD chunk type %d!", fd.type);
     }
-    if (close_on_exec != -1)
-	fcntl(fd, F_SETFD, close_on_exec);
-    if (fcntl_status != -1)
-	fcntl(fd, F_SETFL, fcntl_status);
-    lseek(fd, offset, SEEK_SET);
+
+    if (action & ACTION_LOAD) {
+	if (fd.close_on_exec != -1)
+	    fcntl(fd.fd, F_SETFD, fd.close_on_exec);
+	if (fd.fcntl_status != -1)
+	    fcntl(fd.fd, F_SETFL, fd.fcntl_status);
+	if (fd.offset != -1)
+	    lseek(fd.fd, fd.offset, SEEK_SET);
+    }
+
+    if (action & ACTION_PRINT) {
+	static const int fcntl_mask =
+	    O_APPEND | O_ASYNC | O_DIRECT | O_NOATIME | O_NONBLOCK;
+
+	if (fd.close_on_exec != -1 && (fd.close_on_exec & FD_CLOEXEC))
+	    fprintf(stderr, "(close-on-exec) ");
+
+	if (fd.fcntl_status & fcntl_mask) {
+	    int cnt = 0;
+	    fprintf(stderr, "(");
+	    if (fd.fcntl_status & O_APPEND)
+		fprintf(stderr, "%sO_APPEND", cnt++?", ":"");
+	    if (fd.fcntl_status & O_ASYNC)
+		fprintf(stderr, "%sO_ASYNC", cnt++?", ":"");
+	    if (fd.fcntl_status & O_DIRECT)
+		fprintf(stderr, "%sO_DIRECT", cnt++?", ":"");
+	    if (fd.fcntl_status & O_NOATIME)
+		fprintf(stderr, "%sO_NOATIME", cnt++?", ":"");
+	    if (fd.fcntl_status & O_NONBLOCK)
+		fprintf(stderr, "%sO_NONBLOCK", cnt++?", ":"");
+	    fprintf(stderr, ") ");
+	}
+
+	if (fd.offset != -1)
+	    fprintf(stderr, "(offset: %ld) ", fd.offset);
+    }
 }
 
 void write_chunk_fd(void *fptr, struct cp_fd *data)
@@ -134,7 +194,7 @@ void write_chunk_fd(void *fptr, struct cp_fd *data)
 
     switch (data->type) {
 	case CP_CHUNK_FD_CONSOLE:
-	    write_chunk_fd_console(fptr, &data->console);
+	    write_chunk_fd_console(fptr, data);
 	    break;
 	case CP_CHUNK_FD_MAXFD:
 	    /* No extra write routines needed. */
@@ -226,7 +286,7 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 		/* FIXME - only save termios for consoles once */
 		/* is our terminal? */
 		if (stat_buf.st_rdev == term_dev) {
-		    save_fd_console(pid, flags, chunk->fd.fd, &chunk->fd.console);
+		    fetch_fd_console(pid, flags, chunk->fd.fd, &chunk->fd.console);
 		    chunk->fd.type = CP_CHUNK_FD_CONSOLE;
 		    fprintf(stderr, "Saved console chunk (%d).\n", chunk->fd.fd);
 		} else {
@@ -236,13 +296,13 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 		}
 		break;
 	    case S_IFSOCK:
-		save_fd_socket(pid, flags, chunk->fd.fd, stat_buf.st_ino,
+		fetch_fd_socket(pid, flags, chunk->fd.fd, stat_buf.st_ino,
 			&chunk->fd.socket);
 		chunk->fd.type = CP_CHUNK_FD_SOCKET;
 		break;
 	    case S_IFREG:
-		save_fd_file(pid, flags, chunk->fd.fd, stat_buf.st_ino,
-			&chunk->fd.file);
+		fetch_fd_file(pid, flags, chunk->fd.fd, stat_buf.st_ino,
+			tmp_fn, &chunk->fd.file);
 		chunk->fd.type = CP_CHUNK_FD_FILE;
 		break;
 	    case S_IFBLK:

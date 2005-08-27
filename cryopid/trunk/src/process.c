@@ -277,6 +277,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     fetch_chunks_fd(pid, flags, process_image);
 
     fetch_chunks_sighand(pid, flags, process_image);
+    fetch_chunks_i387_data(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
 
     success = 1;

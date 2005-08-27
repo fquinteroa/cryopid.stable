@@ -67,19 +67,16 @@ void write_bit(void *fptr, void *buf, int len)
 
 char *read_string(void *fptr, char *buf, int maxlen)
 {
-    static char str_buf[1024];
+    /* maxlen is ignored if it is 0 */
     int len;
 
     read_bit(fptr, &len, sizeof(int));
 
-    if (len > maxlen) /* We don't cater for this */
+    if (maxlen && len > maxlen) /* We don't cater for this */
 	bail("String longer than expected!");
 
-    if (len > 1024) /* FIXME: hack */
-	bail("String longer than can handle!");
-
     if (!buf)
-	buf = str_buf;
+	buf = malloc(len+1);
 
     read_bit(fptr, buf, len);
     buf[len] = '\0';
@@ -99,12 +96,12 @@ void write_string(void *fptr, char *buf)
 	write_bit(fptr, buf, len);
 }
 
-int read_chunk(void *fptr, struct cp_chunk **chunkp, int load)
+int read_chunk(void *fptr, int action)
 {
-    struct cp_chunk *chunk = NULL;
     int magic, type;
     
-    /* debug("Reading chunk at %d...", ftell(*(FILE**)fptr)); */
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "[%8lx] ", stream_ops->ftell(fptr));
 
     read_bit(fptr, &magic, sizeof(magic));
     if (magic != CP_CHUNK_MAGIC)
@@ -112,44 +109,37 @@ int read_chunk(void *fptr, struct cp_chunk **chunkp, int load)
 
     read_bit(fptr, &type, sizeof(type));
 
-    if (!load) {
-	chunk = xmalloc(sizeof(struct cp_chunk));
-	chunk->type = type;
-    }
-
     switch (type) {
 	case CP_CHUNK_MISC:
-	    read_chunk_misc(fptr, chunk?&chunk->misc:NULL, load);
+	    read_chunk_misc(fptr, action);
 	    break;
 	case CP_CHUNK_REGS:
-	    read_chunk_regs(fptr, chunk?&chunk->regs:NULL, load);
+	    read_chunk_regs(fptr, action);
 	    break;
 	case CP_CHUNK_I387_DATA:
-	    read_chunk_i387_data(fptr, chunk?&chunk->i387_data:NULL, load);
+	    read_chunk_i387_data(fptr, action);
 	    break;
 	case CP_CHUNK_TLS:
-	    read_chunk_tls(fptr, chunk?&chunk->tls:NULL, load);
+	    read_chunk_tls(fptr, action);
 	    break;
 	case CP_CHUNK_FD:
-	    read_chunk_fd(fptr, chunk?&chunk->fd:NULL, load);
+	    read_chunk_fd(fptr, action);
 	    break;
 	case CP_CHUNK_VMA:
-	    read_chunk_vma(fptr, chunk?&chunk->vma:NULL, load);
+	    read_chunk_vma(fptr, action);
 	    break;
 	case CP_CHUNK_SIGHAND:
-	    read_chunk_sighand(fptr, chunk?&chunk->sighand:NULL, load);
+	    read_chunk_sighand(fptr, action);
 	    break;
 	case CP_CHUNK_FINAL:
-	    free(chunk);
 	    return 0;
 	default:
-	    bail("Unknown chunk type read (0x%x)", chunk->type)
+	    bail("Unknown chunk type read (0x%x)", type)
     }
 
-    if (chunkp)
-	*chunkp = chunk;
-    else
-	free(chunk);
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "\n");
+
     return 1;
 }
 

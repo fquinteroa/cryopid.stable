@@ -22,9 +22,14 @@
 #define RESUMER_END	0x00800000 /* Highest location resumer will be at */
 
 #define TOP_OF_STACK	0x00800000
+#define GB		(1024*1024*1024)
 
 #define MALLOC_START	0x01000000 /* Here we store a pool of 32MB to use */
 #define MALLOC_END	0x02000000
+
+#define ACTION_LOAD		0x01
+#define ACTION_PRINT		0x02
+#define ACTION_LOADPRINT	0x03
 
 /* So with the above parameters, our memory map looks something like:
  *
@@ -130,8 +135,8 @@ struct cp_console {
 
 struct cp_file {
     char *filename;
-    int mode;
     char *contents;
+    int size;
 };
 
 struct cp_socket_tcp {
@@ -188,6 +193,7 @@ struct stream_ops {
     void (*finish)(void *data);
     int (*read)(void *data, void *buf, int len);
     int (*write)(void *data, void *buf, int len);
+    long (*ftell)(void *data);
     void (*dup2)(void *data, int newfd);
 };
 extern struct stream_ops *stream_ops;
@@ -198,7 +204,7 @@ void read_bit(void *fptr, void *buf, int len);
 void write_bit(void *fptr, void *buf, int len);
 char *read_string(void *fptr, char *buf, int maxlen);
 void write_string(void *fptr, char *buf);
-int read_chunk(void *fptr, struct cp_chunk **chunkp, int load);
+int read_chunk(void *fptr, int action);
 void write_chunk(void *fptr, struct cp_chunk *chunk);
 void write_process(int fd, struct list l);
 void discard_bit(void *fptr, int length);
@@ -206,57 +212,60 @@ void get_process(pid_t pid, int flags, struct list *l, long *heap_start);
 unsigned int checksum(char *ptr, int len, unsigned int start);
 
 /* cp_misc.c */
-void read_chunk_misc(void *fptr, struct cp_misc *data, int load);
+void fetch_chunk_misc(void *fptr, int flags, struct list *process_image);
+void read_chunk_misc(void *fptr, int action);
 void write_chunk_misc(void *fptr, struct cp_misc *data);
-void process_chunk_misc(struct cp_misc *data);
 
 /* cp_regs.c */
-void read_chunk_regs(void *fptr, struct cp_regs *data, int load);
+void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image,
+	int stopped);
+void read_chunk_regs(void *fptr, int action);
 void write_chunk_regs(void *fptr, struct cp_regs *data);
-void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image, int stopped);
 
 /* cp_i387.c */
-void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load);
+void fetch_chunks_i387_data(pid_t pid, int flags, struct list *l);
+void read_chunk_i387_data(void *fptr, int action);
 void write_chunk_i387_data(void *fptr, struct cp_i387_data *data);
-void process_chunk_i387_data(struct cp_i387_data *data);
 
 /* cp_tls.c */
-void read_chunk_tls(void *fptr, struct cp_tls *data, int load);
-void write_chunk_tls(void *fptr, struct cp_tls *data);
 void fetch_chunks_tls(pid_t pid, int flags, struct list *l);
+void read_chunk_tls(void *fptr, int action);
+void write_chunk_tls(void *fptr, struct cp_tls *data);
 void install_tls_segv_handler();
 extern int tls_hack;
 
 /* cp_fd.c */
-void read_chunk_fd(void *fptr, struct cp_fd *data, int load);
-void write_chunk_fd(void *fptr, struct cp_fd *data);
 void fetch_chunks_fd(pid_t pid, int flags, struct list *l);
+void read_chunk_fd(void *fptr, int action);
+void write_chunk_fd(void *fptr, struct cp_fd *data);
 extern int console_fd;
 
 /* cp_fd_console.c */
-void read_chunk_fd_console(void *fptr, struct cp_console *console, int load, int fd);
-void write_chunk_fd_console(void *fptr, struct cp_console *console);
-void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console);
+void fetch_fd_console(pid_t pid, int flags, int fd, struct cp_console *console);
+void read_chunk_fd_console(void *fptr, struct cp_fd *fd, int action);
+void write_chunk_fd_console(void *fptr, struct cp_fd *fd);
 
 /* cp_fd_file.c */
-void read_chunk_fd_file(void *fptr, struct cp_file *file, int load, int fd);
+void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
+	struct cp_file *file);
+void read_chunk_fd_file(void *fptr, struct cp_fd *fd, int action);
 void write_chunk_fd_file(void *fptr, struct cp_file *file);
-void save_fd_file(pid_t pid, int flags, int fd, int inode, struct cp_file *file);
 
 /* cp_fd_socket.c */
-void read_chunk_fd_socket(void *fptr, struct cp_socket *socket, int load, int fd);
+void fetch_fd_socket(pid_t pid, int flags, int fd, int inode,
+	struct cp_socket *socket);
+void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action);
 void write_chunk_fd_socket(void *fptr, struct cp_socket *socket);
-void save_fd_socket(pid_t pid, int flags, int fd, int inode, struct cp_socket *socket);
 
 /* cp_vma.c */
-void read_chunk_vma(void *fptr, struct cp_vma *data, int load);
-void write_chunk_vma(void *fptr, struct cp_vma *data);
 void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset);
+void read_chunk_vma(void *fptr, int action);
+void write_chunk_vma(void *fptr, struct cp_vma *data);
 extern int extra_prot_flags;
 extern long scribble_zone;
 
 /* cp_sighand.c */
-void read_chunk_sighand(void *fptr, struct cp_sighand *data, int load);
+void read_chunk_sighand(void *fptr, int action);
 void write_chunk_sighand(void *fptr, struct cp_sighand *data);
 void fetch_chunks_sighand(pid_t pid, int flags, struct list *l);
 

@@ -21,6 +21,7 @@ struct lzo_data {
     lzo_byte *in, *out, *wrkmem;
     lzo_uint in_len, in_used, out_len, new_len;
     int bytesin, bytesout; /* for statistics */
+    int offset;
 };
 
 static void *lzo_writer_init(int fd, int mode)
@@ -50,6 +51,8 @@ static void *lzo_writer_init(int fd, int mode)
 
     ld->bytesin = 0;
     ld->bytesout = 0;
+
+    ld->offset = 0;
 
     return ld;
 }
@@ -110,6 +113,9 @@ static int lzo_writer_read(void *fptr, void *buf, int len)
 	p += x;
 	rlen -= x;
     }
+
+    ld->offset += len;
+
     return len;
 }
 
@@ -194,6 +200,12 @@ static void lzo_writer_finish(void *fptr)
     free(ld);
 }
 
+static long lzo_writer_ftell(void *fptr)
+{
+    struct lzo_data *ld = fptr;
+    return ld->offset;
+}
+
 static void lzo_writer_dup2(void *fptr, int newfd)
 {
     struct lzo_data *ld = fptr;
@@ -212,6 +224,7 @@ struct stream_ops lzo_ops = {
     .read = lzo_writer_read,
     .write = lzo_writer_write,
     .finish = lzo_writer_finish,
+    .ftell = lzo_writer_ftell,
     .dup2 = lzo_writer_dup2,
 };
 

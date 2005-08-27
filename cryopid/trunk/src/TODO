@@ -4,7 +4,7 @@ Legend:
  [*] in progress
 
 General:
-- Cleanup read vs load.
++ Cleanup read vs load.
 - Cleanup static functions.
 - Cleanup header usage.
 - Cleanup error handling (abort cleanly to the process in question too).
@@ -15,11 +15,15 @@ General:
   not use mmap somehow).
 - Better remote syscall support, ala _syscall{0..5}.
 - Split out write vs read code. Why isn't the linker smart enough to do this?
-- Figure a sane way of building & linking against uclibc.
+- Figure a sane way of building & linking against uclibc or dietlibc.
+- Implement make-static cleanly.
 
 Misc:
 - Environment
 - Command line
+  If randomize_va_space = 0, then we should be able to reconstruct the
+  environment, argv, and obtain the right offset.
+  Otherwise, if we're probably screwed.
 - Working directory
 
 Registers:
@@ -32,7 +36,7 @@ FPU:
 
 TLS:
 + TLS segments
-+ tls hack
++ tls hack for porting 2.6 processes to 2.4
 
 File descriptors:
 - files
@@ -52,7 +56,7 @@ File descriptors:
 VMAs:
 + memory segments
 + un-mprotect unreadable segments so they can be scraped.
-- detect EIO and claim VM_IO, so just mmap on other side.
+- detect EIO and claim VM_IO, so just mmap it on other side.
 - deal with non-existant VMAs... warn before continuing?
 + Checksum unsaved libraries
 - Allow turning checksums off for speed.
@@ -62,7 +66,7 @@ Signal Handlers:
 + sighands
 - process signal masks (blocked, ignored)
 + stopped state
-- restart alarm
+- restart alarms
 
 Compression:
 + LZF

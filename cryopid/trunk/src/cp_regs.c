@@ -7,7 +7,7 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-static void process_chunk_regs(struct user *user, int stopped)
+static void load_chunk_regs(struct user *user, int stopped)
 {
     char *cp, *code = (char*)TRAMPOLINE_ADDR;
     struct user_regs_struct *r = &user->regs;
@@ -109,19 +109,26 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     list_append(l, chunk);
 }
 
-void read_chunk_regs(void *fptr, struct cp_regs *data, int load)
+void read_chunk_regs(void *fptr, int action)
 {
-    struct user user, *userp;
+    struct user user;
     int stopped;
-    if (data) {
-	data->user_data = xmalloc(sizeof(struct user));
-	userp = data->user_data;
-    } else
-	userp = &user;
-    read_bit(fptr, userp, sizeof(struct user));
+    read_bit(fptr, &user, sizeof(struct user));
     read_bit(fptr, &stopped, sizeof(int));
-    if (load)
-	process_chunk_regs(userp, stopped);
+    if (action & ACTION_PRINT) {
+	fprintf(stderr, "(registers): Process was %sstopped\n",
+		stopped?"":"not ");
+	fprintf(stderr, "\teax: 0x%08lx ebx: 0x%08lx ecx: 0x%08lx edx: 0x%08lx\n",
+		user.regs.eax, user.regs.ebx, user.regs.ecx, user.regs.edx);
+	fprintf(stderr, "\tesi: 0x%08lx edi: 0x%08lx ebp: 0x%08lx esp: 0x%08lx\n",
+		user.regs.esi, user.regs.edi, user.regs.ebp, user.regs.esp);
+	fprintf(stderr, "\t ds: 0x%08x  es: 0x%08x  fs: 0x%08x  gs: 0x%08x\n",
+		user.regs.ds, user.regs.es, user.regs.fs, user.regs.gs);
+	fprintf(stderr, "\teip: 0x%08lx eflags: 0x%08lx",
+		user.regs.eip, user.regs.eflags);
+    }
+    if (action & ACTION_LOAD)
+	load_chunk_regs(&user, stopped);
 }
 
 void write_chunk_regs(void *fptr, struct cp_regs *data)

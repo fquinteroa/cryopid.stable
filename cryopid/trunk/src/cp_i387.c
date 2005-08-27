@@ -6,16 +6,14 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-void read_chunk_i387_data(void *fptr, struct cp_i387_data *data, int load)
+void read_chunk_i387_data(void *fptr, int action)
 {
     struct user_i387_struct u;
-    if (!load) {
-	data->i387_data = xmalloc(sizeof(struct user_i387_struct));
-	read_bit(fptr, data->i387_data, sizeof(struct user_i387_struct));
-	return;
-    }
-
     read_bit(fptr, &u, sizeof(struct user_i387_struct));
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "i387 state (not currently restored)");
+
     /* FIXME : figure out how to restore i387 state */
 }
 

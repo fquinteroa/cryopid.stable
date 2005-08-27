@@ -13,110 +13,119 @@
 int extra_prot_flags;
 long scribble_zone = 0; /* somewhere to scribble on in child */
 
-void read_chunk_vma(void *fptr, struct cp_vma *data, int load)
+void read_chunk_vma(void *fptr, int action)
 {
     struct cp_vma vma;
     int fd;
 
-    if (!data)
-	data = &vma;
-    read_bit(fptr, &data->start, sizeof(int));
-    read_bit(fptr, &data->length, sizeof(int));
-    read_bit(fptr, &data->prot, sizeof(int));
-    read_bit(fptr, &data->flags, sizeof(int));
-    read_bit(fptr, &data->dev, sizeof(int));
-    read_bit(fptr, &data->pg_off, sizeof(int));
-    read_bit(fptr, &data->inode, sizeof(int));
-    data->filename = read_string(fptr, NULL, 1024);
-    /* fprintf(stderr, "Loading 0x%x of size %d\n", data->start, data->length); */
-    read_bit(fptr, &data->have_data, sizeof(data->have_data));
-    read_bit(fptr, &data->checksum, sizeof(data->checksum));
-    read_bit(fptr, &data->is_heap, sizeof(data->is_heap));
-    if (load) {
-	fd = -1;
-	data->data = (void*)data->start;
-	int try_local_lib = !(data->prot & PROT_WRITE) && data->have_data && data->filename[0];
-	int need_checksum = try_local_lib || (!data->have_data && data->filename[0]);
-	if (need_checksum) {
-	    int good_lib = 0;
-	    static char buf[4096];
-	    /* check if the checksum matches first, else we may as well use
-	     * that. */
-	    if ((fd = open(data->filename, O_RDONLY)) != -1 &&
-		lseek(fd, data->pg_off, SEEK_SET) == data->pg_off) {
-		unsigned int c = 0;
-		int remaining = data->length;
-		while (remaining > 0) {
-		    int len = sizeof(buf), rlen;
-		    if (len > remaining)
-			len = remaining;
-		    rlen = read(fd, buf, len);
-		    if (rlen == 0)
-			break;
-		    c = checksum(buf, rlen, c);
-		    remaining -= rlen;
-		}
-		if (remaining <= sizeof(buf)) {
-		    /* padded out to a page, compute checksum anyway */
-		    memset(buf, 0, sizeof(buf));
-		    c = checksum(buf, remaining, c);
-		    remaining = 0;
-		}
-		if (remaining == 0) {
-		    if (c == data->checksum) {
-			/* we can just load it from disk, save memory */
-			if (data->have_data) {
-			    data->have_data = 0;
-			    discard_bit(fptr, data->length);
-			}
-			good_lib = 1;
-		    } else {
-			close(fd);
+    read_bit(fptr, &vma.start, sizeof(int));
+    read_bit(fptr, &vma.length, sizeof(int));
+    read_bit(fptr, &vma.prot, sizeof(int));
+    read_bit(fptr, &vma.flags, sizeof(int));
+    read_bit(fptr, &vma.dev, sizeof(int));
+    read_bit(fptr, &vma.pg_off, sizeof(int));
+    read_bit(fptr, &vma.inode, sizeof(int));
+    vma.filename = read_string(fptr, NULL, 1024);
+
+    read_bit(fptr, &vma.have_data, sizeof(vma.have_data));
+    read_bit(fptr, &vma.checksum, sizeof(vma.checksum));
+    read_bit(fptr, &vma.is_heap, sizeof(vma.is_heap));
+
+    if (action & ACTION_PRINT) {
+	fprintf(stderr, "VMA %08lx-%08lx (size:%8ld) %c%c%c%c %08lx %02x:%02x %ld\t%s",
+		vma.start, vma.start+vma.length, vma.length,
+		(vma.prot&PROT_READ)?'r':'-',
+		(vma.prot&PROT_WRITE)?'w':'-',
+		(vma.prot&PROT_EXEC)?'x':'-',
+		(vma.prot&MAP_PRIVATE)?'p':'s',
+		vma.pg_off,
+		vma.dev >> 8,
+		vma.dev & 0xff,
+		vma.inode,
+		vma.filename
+		);
+    }
+
+    fd = -1;
+    vma.data = (void*)vma.start;
+    int try_local_lib = !(vma.prot & PROT_WRITE) && vma.have_data && vma.filename[0];
+    int need_checksum = try_local_lib || (!vma.have_data && vma.filename[0]);
+    if (need_checksum) {
+	int good_lib = 0;
+	static char buf[4096];
+	/* check if the checksum matches first, else we may as well use
+	 * that. */
+	if ((fd = open(vma.filename, O_RDONLY)) != -1 &&
+	    lseek(fd, vma.pg_off, SEEK_SET) == vma.pg_off) {
+	    unsigned int c = 0;
+	    int remaining = vma.length;
+	    while (remaining > 0) {
+		int len = sizeof(buf), rlen;
+		if (len > remaining)
+		    len = remaining;
+		rlen = read(fd, buf, len);
+		if (rlen == 0)
+		    break;
+		c = checksum(buf, rlen, c);
+		remaining -= rlen;
+	    }
+	    if (remaining <= sizeof(buf)) {
+		/* padded out to a page, compute checksum anyway */
+		memset(buf, 0, sizeof(buf));
+		c = checksum(buf, remaining, c);
+		remaining = 0;
+	    }
+	    if (remaining == 0) {
+		if (c == vma.checksum) {
+		    /* we can just load it from disk, save memory */
+		    if (vma.have_data) {
+			vma.have_data = 0;
+			discard_bit(fptr, vma.length);
 		    }
+		    good_lib = 1;
 		} else {
 		    close(fd);
 		}
-	    }
-	    if (!data->have_data && data->filename[0] && !good_lib) {
-		bail("Aborting: Local libraries have changed (%s).\n"
-			"Resuming will almost certainly fail!",
-			data->filename);
+	    } else {
+		close(fd);
 	    }
 	}
-	if (data->have_data) {
-	    if (data->is_heap) {
-		/* Set the heap appropriately */
-		brk(data->data+data->length);
-		/* assert(sbrk(0) == data->data+data->length); */
-	    }
-	    syscall_check((int)mmap((void*)data->data, data->length,
-			data->prot,
-			MAP_ANONYMOUS | MAP_FIXED | data->flags, -1, 0),
-		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
-		    data->data, data->length, data->prot,
-		    MAP_ANONYMOUS | MAP_FIXED | data->flags);
-	    read_bit(fptr, data->data, data->length);
-	    syscall_check(mprotect((void*)data->data, data->length,
-			data->prot | extra_prot_flags), 0, "mprotect");
-	} else if (data->filename[0]) {
-	    if (fd == -1)
-		syscall_check(fd = open(data->filename, O_RDONLY), 0,
-			"open(%s)", data->filename);
-	    syscall_check((int)mmap((void*)data->data, data->length,
-			data->prot,
-			MAP_FIXED | data->flags, fd, data->pg_off),
-		    0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, %d, 0x%x)",
-		    data->data, data->length, data->prot,
-		    MAP_FIXED | data->flags, fd, data->pg_off);
-	    syscall_check(close(fd), 0, "close(%d)", fd);
-	    syscall_check(mprotect((void*)data->data, data->length,
-			data->prot | extra_prot_flags), 0, "mprotect");
-	} else
-	    bail("No source for map 0x%lx (size 0x%lx)", data->start, data->length);
-    } else {
-	/* FIXME */
-	/* load = 0 is not yet used */
+	if (!vma.have_data && vma.filename[0] && !good_lib) {
+	    bail("Aborting: Local libraries have changed (%s).\n"
+		    "Resuming will almost certainly fail!",
+		    vma.filename);
+	}
     }
+    if (vma.have_data) {
+	if (vma.is_heap) {
+	    /* Set the heap appropriately */
+	    brk(vma.data+vma.length);
+	    /* assert(sbrk(0) == vma.data+vma.length); */
+	}
+	syscall_check((int)mmap((void*)vma.data, vma.length,
+		    vma.prot,
+		    MAP_ANONYMOUS | MAP_FIXED | vma.flags, -1, 0),
+		0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
+		vma.data, vma.length, vma.prot,
+		MAP_ANONYMOUS | MAP_FIXED | vma.flags);
+	read_bit(fptr, vma.data, vma.length);
+	syscall_check(mprotect((void*)vma.data, vma.length,
+		    vma.prot | extra_prot_flags), 0, "mprotect");
+    } else if (vma.filename[0]) {
+	if (fd == -1)
+	    syscall_check(fd = open(vma.filename, O_RDONLY), 0,
+		    "open(%s)", vma.filename);
+	syscall_check((int)mmap((void*)vma.data, vma.length,
+		    vma.prot,
+		    MAP_FIXED | vma.flags, fd, vma.pg_off),
+		0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, %d, 0x%x)",
+		vma.data, vma.length, vma.prot,
+		MAP_FIXED | vma.flags, fd, vma.pg_off);
+	syscall_check(close(fd), 0, "close(%d)", fd);
+	syscall_check(mprotect((void*)vma.data, vma.length,
+		    vma.prot | extra_prot_flags), 0, "mprotect");
+    } else
+	bail("No source for map 0x%lx (size 0x%lx)", vma.start, vma.length);
 }
 
 void write_chunk_vma(void *fptr, struct cp_vma *data)

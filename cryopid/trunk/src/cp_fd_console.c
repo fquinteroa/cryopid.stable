@@ -40,7 +40,7 @@ static int get_termios(pid_t pid, int fd, struct termios *t)
     return 1;
 }
 
-void save_fd_console(pid_t pid, int flags, int fd, struct cp_console *console)
+void fetch_fd_console(pid_t pid, int flags, int fd, struct cp_console *console)
 {
     get_termios(pid, fd, &console->termios); /* FIXME: error checking? */
 }
@@ -53,21 +53,20 @@ static void restore_fd_console(int fd, struct cp_console *console)
     ioctl(fd, TCSETS, &console->termios);
 }
 
-void read_chunk_fd_console(void *fptr, struct cp_console *cptr, int load, int fd)
+void read_chunk_fd_console(void *fptr, struct cp_fd *fd, int action)
 {
-    struct cp_console console;
-    read_bit(fptr, &console.termios, sizeof(struct termios));
-    if (load) {
-	restore_fd_console(fd, &console);
-    } else {
-	if (cptr)
-	    *cptr = console;
-    }
+    read_bit(fptr, &fd->console.termios, sizeof(struct termios));
+    
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "console FD ");
+
+    if (action & ACTION_LOAD)
+	restore_fd_console(fd->fd, &fd->console);
 }
 
-void write_chunk_fd_console(void *fptr, struct cp_console *console)
+void write_chunk_fd_console(void *fptr, struct cp_fd *fd)
 {
-    write_bit(fptr, &console->termios, sizeof(struct termios));
+    write_bit(fptr, &fd->console.termios, sizeof(struct termios));
 }
 
 /* vim:set ts=8 sw=4 noet: */

@@ -9,6 +9,8 @@
 
 #define debug(s, x...) fprintf(stderr, s"\n", ##x)
 
+#define info(x...) fprintf(stderr, x)
+
 #define bail(s, x...) \
 	{ \
 		fprintf(stderr, s"\n", ##x); \

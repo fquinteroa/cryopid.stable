@@ -20,32 +20,35 @@ static void (*old_segvhandler)(int, siginfo_t*, void*);
 extern int set_thread_area(struct user_desc *u_info);
 #endif
 
-void read_chunk_tls(void *fptr, struct cp_tls *data, int load)
+void read_chunk_tls(void *fptr, int action)
 {
-    if (load) {
-	struct user_desc u;
-	read_bit(fptr, &u, sizeof(struct user_desc));
-	if (!u.base_addr)
-	    return;
+    struct user_desc u;
+    read_bit(fptr, &u, sizeof(struct user_desc));
 
-	if (!tls_hack && set_thread_area(NULL) == -1) {
-	    if (errno == ENOSYS) {
-		/* We are not a TLS capable system. Turn on TLS emulation voodoo. */
-		tls_hack = 1;
-
-		/* We'll need write access to the code segments to do this. */
-		extra_prot_flags |= PROT_WRITE;
-	    }
-	}
-
-	if (tls_hack)
-	    tls_base_address = u.base_addr;
-	else
-	    syscall_check(set_thread_area(&u), 0, "set_thread_area");
+    if (!u.base_addr)
 	return;
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "TLS entry (%d): base_addr = 0x%lx", 
+		u.entry_number, u.base_addr);
+
+    if (!(action & ACTION_LOAD))
+	return;
+
+    if (!tls_hack && set_thread_area(NULL) == -1) {
+	if (errno == ENOSYS) {
+	    /* We are not a TLS capable system. Turn on TLS emulation voodoo. */
+	    tls_hack = 1;
+
+	    /* We'll need write access to the code segments to do this. */
+	    extra_prot_flags |= PROT_WRITE;
+	}
     }
-    data->u = xmalloc(sizeof(struct user_desc));
-    read_bit(fptr, data->u, sizeof(struct user_desc));
+
+    if (tls_hack)
+	tls_base_address = u.base_addr;
+    else
+	syscall_check(set_thread_area(&u), 0, "set_thread_area");
 }
 
 void fetch_chunks_tls(pid_t pid, int flags, struct list *l)

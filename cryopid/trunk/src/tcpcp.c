@@ -142,23 +142,19 @@ void *tcpcp_get(pid_t pid, int s)
     int size,saved_errno;
     void *ici;
 
-    debug("bere");
     if (tcp_max_ici_size(pid, s, &size) < 0)
 	return NULL;
 
     ici = malloc(size);
-    debug("here");
     if (!ici)
 	return NULL;
 
-    debug("there");
     if (!tcp_get_ici(pid, s, ici,size))
 	return ici;
 
     saved_errno = errno;
     free(ici);
     errno = saved_errno;
-    debug("mere");
     return NULL;
 }
 

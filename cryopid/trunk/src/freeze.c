@@ -27,8 +27,10 @@ void usage(char* argv0)
 "\n"
 "    -w <writer> Nomiate an output writer to use.\n"
 "    -l      Include libraries in the image of the file for a full image.\n"
-"    -f      Save the contents of open files into the image. (Broken!)\n"
+/*
+"    -f      Save the contents of open files into the image.\n"
 "    -c      Save children of this process as well.\n"
+*/
 "\n"
 "This program is part of CryoPID. http://cryopid.berlios.de/\n",
     argv0);

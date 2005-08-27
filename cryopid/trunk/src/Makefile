@@ -3,7 +3,7 @@ CHUNK_OBJS = cp_fd.o cp_fd_console.o cp_fd_file.o cp_fd_socket.o cp_i387.o \
 OBJECTS = common.c cpimage.o list.o asmfuncs.o \
 		process.o tcpcp.o $(CHUNK_OBJS)
 # STUB_TYPES = raw buffered lzo
-STUB_TYPES = lzo
+STUB_TYPES = raw
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
@@ -28,7 +28,7 @@ stub-image-%.o: stub-%
 stub-%: stub.o supervisor.o $(OBJECTS) writer_%.c
 	@echo Linking $@
 	$(CC) -static -fpic -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -llzo
-	@strip $@
+	#@strip $@
 	@$(DEPAX) $@
 
 freeze: $(OBJECTS) freeze.o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
