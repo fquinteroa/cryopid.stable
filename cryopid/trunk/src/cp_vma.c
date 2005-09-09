@@ -60,7 +60,7 @@ void read_chunk_vma(void *fptr, int action)
 	    unsigned int c = 0;
 	    int remaining = vma.length;
 	    while (remaining > 0) {
-		int len = sizeof(buf), rlen;
+		int rlen, len = sizeof(buf);
 		if (len > remaining)
 		    len = remaining;
 		rlen = read(fd, buf, len);
@@ -83,12 +83,10 @@ void read_chunk_vma(void *fptr, int action)
 			discard_bit(fptr, vma.length);
 		    }
 		    good_lib = 1;
-		} else {
+		} else
 		    close(fd);
-		}
-	    } else {
+	    } else
 		close(fd);
-	    }
 	}
 	if (!vma.have_data && vma.filename[0] && !good_lib) {
 	    bail("Aborting: Local libraries have changed (%s).\n"
@@ -103,7 +101,7 @@ void read_chunk_vma(void *fptr, int action)
 	    /* assert(sbrk(0) == vma.data+vma.length); */
 	}
 	syscall_check((int)mmap((void*)vma.data, vma.length,
-		    vma.prot,
+		    PROT_READ | PROT_WRITE,
 		    MAP_ANONYMOUS | MAP_FIXED | vma.flags, -1, 0),
 		0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
 		vma.data, vma.length, vma.prot,
