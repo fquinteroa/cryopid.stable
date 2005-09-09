@@ -2,7 +2,7 @@ R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_so
 W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_i387.o cp_w_misc.o cp_w_regs.o cp_w_sighand.o cp_w_tls.o cp_w_vma.o tcpcp_w.o
 COMMON_OBJS = common.c list.o asmfuncs.o
 # STUB_TYPES = raw buffered lzo
-STUB_TYPES = raw
+STUB_TYPES = lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
