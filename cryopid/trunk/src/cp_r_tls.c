@@ -51,34 +51,6 @@ void read_chunk_tls(void *fptr, int action)
 	syscall_check(set_thread_area(&u), 0, "set_thread_area");
 }
 
-void fetch_chunks_tls(pid_t pid, int flags, struct list *l)
-{
-    int i;
-    struct cp_chunk *chunk;
-    struct user_desc *u = NULL;
-    
-    for (i = 0; i < 256; i++) { /* FIXME: verify this magic number */
-	if (!u) {
-	    u = xmalloc(sizeof(struct user_desc));
-	    memset(u, 0, sizeof(struct user_desc));
-	}
-	u->entry_number = i;
-	if (ptrace(PTRACE_GET_THREAD_AREA, pid, i, u) == -1)
-	    continue;
-
-	chunk = xmalloc(sizeof(struct cp_chunk));
-	chunk->type = CP_CHUNK_TLS;
-	chunk->tls.u = u;
-	list_append(l, chunk);
-	u = NULL;
-    }
-}
-
-void write_chunk_tls(void *fptr, struct cp_tls *data)
-{
-    write_bit(fptr, data->u, sizeof(struct user_desc));
-}
-
 static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 {
     static int rewrite_stage = 0;

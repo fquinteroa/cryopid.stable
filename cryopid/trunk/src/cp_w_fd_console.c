@@ -45,25 +45,6 @@ void fetch_fd_console(pid_t pid, int flags, int fd, struct cp_console *console)
     get_termios(pid, fd, &console->termios); /* FIXME: error checking? */
 }
 
-static void restore_fd_console(int fd, struct cp_console *console)
-{
-    /* Declare ioctl extern, as including sys/ioctl.h makes compilation unhappy :/ */
-    extern int ioctl(int fd, unsigned long req, ...);
-    dup2(console_fd, fd);
-    ioctl(fd, TCSETS, &console->termios);
-}
-
-void read_chunk_fd_console(void *fptr, struct cp_fd *fd, int action)
-{
-    read_bit(fptr, &fd->console.termios, sizeof(struct termios));
-    
-    if (action & ACTION_PRINT)
-	fprintf(stderr, "console FD ");
-
-    if (action & ACTION_LOAD)
-	restore_fd_console(fd->fd, &fd->console);
-}
-
 void write_chunk_fd_console(void *fptr, struct cp_fd *fd)
 {
     write_bit(fptr, &fd->console.termios, sizeof(struct termios));

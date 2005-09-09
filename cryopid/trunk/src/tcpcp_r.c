@@ -28,89 +28,6 @@
 /* ----- Interface to low-level API ---------------------------------------- */
 
 
-static int tcp_max_ici_size(pid_t pid, int s,int *size)
-{
-    struct user_regs_struct r;
-    int size_size = sizeof(*size);
-    long args[5];
-
-    /* return getsockopt(s,SOL_TCP,TCP_MAXICISIZE,size,&size_size); */
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
-	perror("ptrace(GETREGS)");
-	return 0;
-    }
-
-    r.eax = __NR_socketcall;
-    r.ebx = SYS_GETSOCKOPT;
-    r.ecx = scribble_zone+0x40;
-
-    args[0] = s;
-    args[1] = SOL_TCP;
-    args[2] = TCP_MAXICISIZE;
-    args[3] = scribble_zone+0x60;
-    args[4] = scribble_zone+0x70;
-
-    memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
-    memcpy_into_target(pid, (void*)(scribble_zone+0x70), &size_size, sizeof(size_size));
-
-    if (!do_syscall(pid, &r)) {
-	errno = ENOSYS;
-	return -1;
-    }
-
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return -1;
-    }
-
-    memcpy_from_target(pid, size, (void*)(scribble_zone+0x60), size_size);
-
-    return 0;
-}
-
-
-static int tcp_get_ici(pid_t pid, int s, void *ici, int size)
-{
-    struct user_regs_struct r;
-    long args[5];
-
-    /* return getsockopt(s,SOL_TCP,TCP_ICI,ici,&size); */
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
-	perror("ptrace(GETREGS)");
-	return 0;
-    }
-
-    r.eax = __NR_socketcall;
-    r.ebx = SYS_GETSOCKOPT;
-    r.ecx = scribble_zone+0x40;
-
-    args[0] = s;
-    args[1] = SOL_TCP;
-    args[2] = TCP_ICI;
-    args[3] = scribble_zone+0x70;
-    args[4] = scribble_zone+0x60;
-
-    memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
-    memcpy_into_target(pid, (void*)(scribble_zone+0x60), &size, sizeof(size));
-
-    if (!do_syscall(pid, &r)) {
-	errno = ENOSYS;
-	return -1;
-    }
-
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return -1;
-    }
-
-    memcpy_from_target(pid, ici, (void*)(scribble_zone+0x70), size);
-
-    return 0;
-}
-
-
 static int tcp_set_ici(int s,const void *ici,int size)
 {
     return setsockopt(s,SOL_TCP,TCP_ICI,ici,size);
@@ -135,28 +52,6 @@ static int check_ici_v0(const struct tcpcp_ici *ici)
 
 
 /* ----- Public functions -------------------------------------------------- */
-
-
-void *tcpcp_get(pid_t pid, int s)
-{
-    int size,saved_errno;
-    void *ici;
-
-    if (tcp_max_ici_size(pid, s, &size) < 0)
-	return NULL;
-
-    ici = malloc(size);
-    if (!ici)
-	return NULL;
-
-    if (!tcp_get_ici(pid, s, ici,size))
-	return ici;
-
-    saved_errno = errno;
-    free(ici);
-    errno = saved_errno;
-    return NULL;
-}
 
 
 int tcpcp_size(const void *ici)

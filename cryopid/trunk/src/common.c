@@ -79,4 +79,12 @@ void *xmalloc(int len)
     return p;
 }
 
+unsigned int checksum(char *ptr, int len, unsigned int start)
+{
+    int sum = start, i;
+    for (i = 0; i < len; i++)
+	sum = ((sum << 5) + sum) ^ ptr[i];
+    return sum;
+}
+
 /* vim:set ts=8 sw=4 noet: */

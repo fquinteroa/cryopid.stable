@@ -265,7 +265,7 @@ static inline void relocate_stack()
 
     /* Reposition the stack at top_of_old_stack */
     top_of_old_stack = find_top_of_stack();
-    top_of_all_memory = (void*)((((unsigned long)top_of_old_stack + GB)/GB)*GB);
+    top_of_all_memory = (void*)((((unsigned long)top_of_old_stack-4 + GB)/GB)*GB);
 
     top_of_new_stack = (void*)TOP_OF_STACK;
     size_of_new_stack = PAGE_SIZE;
@@ -287,7 +287,6 @@ static inline void relocate_stack()
 	    munmap(top_of_our_memory,
 		(top_of_all_memory - top_of_our_memory)),
 		0, "munmap(stack)");
-    system("cat /proc/$PPID/maps");
 }
 
 int main(int argc, char**argv)

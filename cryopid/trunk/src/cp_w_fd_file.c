@@ -11,10 +11,6 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-void restore_fd_file(struct cp_fd *fd, int action)
-{
-}
-
 void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
 	struct cp_file *file)
 {
@@ -44,22 +40,6 @@ void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
     } while (bufsz <= 8192); /* Keep it sane */
 out:
     free(buf);
-}
-
-void read_chunk_fd_file(void *fptr, struct cp_fd *fd, int action)
-{
-    struct cp_file file;
-
-    file.filename = read_string(fptr, NULL, 0);
-    read_bit(fptr, &file.size, sizeof(int));
-    if (file.size) {
-	file.contents = malloc(file.size);
-	read_bit(fptr, file.contents, file.size);
-    } else
-	file.contents = NULL;
-
-    if (action & ACTION_LOAD)
-	restore_fd_file(fd, action);
 }
 
 void write_chunk_fd_file(void *fptr, struct cp_file *file)

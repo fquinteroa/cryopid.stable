@@ -57,31 +57,6 @@ static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inod
     return 1;
 }
 
-static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *tcp,
-	int action)
-{
-    void *ici;
-    int len, s;
-
-    if (action & ACTION_PRINT)
-	fprintf(stderr, "TCP socket ");
-
-    read_bit(fptr, &len, sizeof(int));
-    if (!len)
-	return;
-    ici = xmalloc(len);
-    read_bit(fptr, ici, len);
-
-    if (action & ACTION_LOAD) {
-	syscall_check(s = tcpcp_create(ici), 0, "tcpcp_create");
-	if (s != fd) {
-	    syscall_check(dup2(s, fd), 0, "dup2");
-	    close(s);
-	}
-	syscall_check(tcpcp_activate(fd), 0, "tcpcp_activate");
-    }
-}
-
 static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp)
 {
     int len = 0;
@@ -100,23 +75,6 @@ void fetch_fd_socket(pid_t pid, int flags, int fd, int inode,
     if (get_tcp_socket(&socket->s_tcp, pid, fd, inode)) {
 	socket->proto = PROTO_TCP;
 	return;
-    }
-}
-
-void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)
-{
-    read_bit(fptr, &fd->socket.proto, sizeof(int));
-    switch (fd->socket.proto) {
-	case PROTO_TCP:
-	    read_chunk_fd_socket_tcp(fptr, fd->fd, &fd->socket.s_tcp, action);
-	    break;
-	case PROTO_UNIX:
-	case PROTO_UDP:
-	default:
-	    if (action & ACTION_PRINT)
-		fprintf(stderr, "unsupported socket type (%d)",
-			fd->socket.proto);
-	    break;
     }
 }
 

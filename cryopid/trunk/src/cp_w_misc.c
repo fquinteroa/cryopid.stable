@@ -1,10 +1,5 @@
 #include "cpimage.h"
 
-void read_chunk_misc(void *fptr, int action)
-{
-    /* FIXME */
-}
-
 void write_chunk_misc(void *fptr, struct cp_misc *data)
 {
     /* FIXME */
