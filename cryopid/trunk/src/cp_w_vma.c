@@ -58,6 +58,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     char *ptr1, *ptr2;
     int dminor, dmajor;
     int old_vma_prot = -1;
+    int keep_vma_data;
 
     memset(vma, 0, sizeof(struct cp_vma));
 
@@ -77,18 +78,18 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     *ptr2 = '\0';
     vma->start = strtoul(ptr1, NULL, 16);
 
-    if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+PAGE_SIZE)
+    if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+PAGE_SIZE) {
 	fprintf(stderr, "     Ignoring map - looks like resumer.\n");
-    else if (vma->start >= RESUMER_START && vma->start <= RESUMER_END)
+	return 0;
+    }
+    if (vma->start >= RESUMER_START && vma->start <= RESUMER_END) {
 	fprintf(stderr, "     Ignoring map - looks like resumer.\n");
-    else if (vma->start > 0xC0000000) /* FIXME - use get_task_size() */
+	return 0;
+    }
+    if (vma->start >= get_task_size()) {
 	fprintf(stderr, "     Ignoring map - in kernel space.\n");
-    else
-	goto keep_going;
-
-    return 0;
-
-keep_going:
+	return 0;
+    }
 
     ptr1 = ptr2+1;
     if ((ptr2 = strchr(ptr1, ' ')) == NULL) {
@@ -213,53 +214,65 @@ keep_going:
 	debug("[+] Found scribble zone: 0x%lx", scribble_zone);
     }
 
-    /* Now to get data too */
+    /* Fetch the data, at least for checksumming purposes. */
+    vma->data = xmalloc(vma->length);
+    memcpy_from_target(pid, vma->data, (void*)vma->start, vma->length);
+    vma->checksum = checksum(vma->data, vma->length, 0);
+
+    /* Cases where we want to keep the VMA in the image */
+    keep_vma_data = 0;
     if (get_library_data ||
-	    ((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE))
-	    || (vma->flags & MAP_ANONYMOUS)) {
-	/* We have a memory segment. We should retrieve its data */
-	long *pos, *end;
-	long *datapos;
-	/* fprintf(stderr, "Retrieving %ld bytes from segment 0x%lx... ",
-		vma->length, vma->start); */
-	vma->data = xmalloc(vma->length);
-	datapos = vma->data;
-	end = (long*)(vma->start + vma->length);
+	((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE)) || 
+	(vma->flags & MAP_ANONYMOUS))
+	keep_vma_data = 1;
 
-	for(pos = (long*)(vma->start); pos < end; pos++, datapos++) {
-	    *datapos = 
-		ptrace(PTRACE_PEEKDATA, pid, pos, NULL);
-	    if (errno != 0)
-		perror("ptrace(PTRACE_PEEKDATA)");
+    /* If it's on disk and we're not saving libraries, checksum the source */
+    if (!keep_vma_data && vma->filename) {
+	int lfd;
+	int remaining;
+	unsigned int c;
+	static char buf[4096];
+
+	keep_vma_data = 1; /* Assume guiltly until proven innocent */
+
+	if ((lfd = open(vma->filename, O_RDONLY)) == -1)
+	    goto out;
+
+	if (lseek(lfd, vma->pg_off, SEEK_SET) != vma->pg_off)
+	    goto out_close;
+
+	remaining = vma->length;
+	c = 0;
+	while (remaining > 0) {
+	    int len = sizeof(buf), rlen;
+	    if (len > remaining)
+		len = remaining;
+	    rlen = read(lfd, buf, len);
+	    if (rlen <= 0)
+		goto out_close;
+	    c = checksum(buf, rlen, c);
+	    remaining -= rlen;
 	}
 
-	/* fprintf(stderr, "done.\n"); */
+	/* So did we have a good checksum after all that? */
+	if (c == vma->checksum)
+	    keep_vma_data = 0;
+
+out_close:
+	close(lfd);
+    }
+out:
+
+    /* Figure out if we need to keep it */
+    if (vma->data && keep_vma_data) {
 	vma->have_data = 1;
-
-	/* and checksum it */
-	vma->checksum = checksum(vma->data, vma->length, 0);
     } else {
-	/* checksum the data anyway */
-	long *pos, *end;
-	unsigned int c = 0, x;
-	end = (long*)(vma->start + vma->length);
-	for(pos = (long*)(vma->start); pos < end; pos++) {
-	    x = ptrace(PTRACE_PEEKDATA, pid, pos, NULL);
-	    if (errno != 0)
-		perror("ptrace(PTRACE_PEEKDATA)");
-	    c = checksum((char*)(&x)+0, 1, c);
-	    c = checksum((char*)(&x)+1, 1, c);
-	    c = checksum((char*)(&x)+2, 1, c);
-	    c = checksum((char*)(&x)+3, 1, c);
-	}
-
+	free(vma->data);
 	vma->data = NULL;
-	vma->checksum = c;
     }
 
-    if (old_vma_prot != -1) {
+    if (old_vma_prot != -1)
 	do_mprotect(pid, vma->start, vma->length, old_vma_prot);
-    }
 
     return 1;
 }

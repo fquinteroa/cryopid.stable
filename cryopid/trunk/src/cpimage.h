@@ -22,7 +22,6 @@
 #define RESUMER_END	0x00800000 /* Highest location resumer will be at */
 
 #define TOP_OF_STACK	0x00800000
-#define GB		(1024*1024*1024)
 
 #define MALLOC_START	0x01000000 /* Here we store a pool of 32MB to use */
 #define MALLOC_END	0x02000000
@@ -111,7 +110,7 @@ struct cp_tls {
 };
 
 struct cp_vma {
-    long start, length;
+    unsigned long start, length;
     int prot;
     int flags;
     int dev;

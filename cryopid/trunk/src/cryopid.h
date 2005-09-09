@@ -27,6 +27,8 @@
 	    abort(); \
 	}
 
+#define GB		(1024*1024*1024)
+
 /* elfwriter.c */
 void write_stub(int fd, long offset);
 
@@ -34,6 +36,7 @@ void write_stub(int fd, long offset);
 int syscall_check(int retval, int can_be_fake, char* desc, ...);
 void *xmalloc(int len);
 unsigned int checksum(char *ptr, int len, unsigned int start);
+unsigned long get_task_size();
 
 /* writer_raw.c */
 extern struct stream_ops raw_ops;
