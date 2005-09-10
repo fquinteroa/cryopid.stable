@@ -12,7 +12,7 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-int tls_hack = 0;
+int emulate_tls = 0;
 
 static int tls_base_address;
 static void (*old_segvhandler)(int, siginfo_t*, void*);
@@ -23,6 +23,8 @@ extern int set_thread_area(struct user_desc *u_info);
 void read_chunk_tls(void *fptr, int action)
 {
     struct user_desc u;
+    int ret;
+
     read_bit(fptr, &u, sizeof(struct user_desc));
 
     if (!u.base_addr)
@@ -35,17 +37,20 @@ void read_chunk_tls(void *fptr, int action)
     if (!(action & ACTION_LOAD))
 	return;
 
-    if (!tls_hack && set_thread_area(NULL) == -1) {
-	if (errno == ENOSYS) {
+    if (!emulate_tls) {
+	ret = set_thread_area(NULL);
+	if (ret == -1) /* some libcs return the actual errno instead of -1 */
+	    ret = -errno;
+	if (ret == -ENOSYS) {
 	    /* We are not a TLS capable system. Turn on TLS emulation voodoo. */
-	    tls_hack = 1;
+	    emulate_tls = 1;
 
 	    /* We'll need write access to the code segments to do this. */
 	    extra_prot_flags |= PROT_WRITE;
 	}
     }
 
-    if (tls_hack)
+    if (emulate_tls)
 	tls_base_address = u.base_addr;
     else
 	syscall_check(set_thread_area(&u), 0, "set_thread_area");
@@ -59,6 +64,9 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 
     struct ucontext *uc = (struct ucontext*)ucontext;
     unsigned char *pt = (unsigned char*)uc->uc_mcontext.eip;
+
+    fprintf(stderr, "Rewrite stage: %d\n", rewrite_stage);
+    fflush(stderr);
 
     if (rewrite_stage == 1) {
 	pt = rewrite_start;
@@ -207,9 +215,6 @@ void install_tls_segv_handler()
 {
     struct k_sigaction sa;
     struct k_sigaction old_sa;
-
-    if (!tls_hack)
-	return;
 
     memset(&sa, 0, sizeof(sa));
     sa.sa_hand = (__sighandler_t)tls_segv_handler;

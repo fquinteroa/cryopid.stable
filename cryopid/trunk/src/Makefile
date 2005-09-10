@@ -27,7 +27,7 @@ stub-image-%.o: stub-%
 stub-%: stub.o supervisor.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
 	$(CC) -static -fpic -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -lz
-	@#strip $@
+	@strip $@
 	@$(DEPAX) $@
 
 freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process.o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))

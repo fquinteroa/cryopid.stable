@@ -28,7 +28,7 @@ void read_chunk_sighand(void *fptr, int action)
     }
 
     if (action & ACTION_LOAD) {
-	if (tls_hack && sig_num == SIGSEGV) {
+	if (emulate_tls && sig_num == SIGSEGV) {
 	    install_tls_segv_handler();
 	} else {
 	    syscall_check(set_rt_sigaction(sig_num, &ksa, NULL), 0,

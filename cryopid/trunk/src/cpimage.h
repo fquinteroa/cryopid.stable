@@ -231,7 +231,7 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l);
 void read_chunk_tls(void *fptr, int action);
 void write_chunk_tls(void *fptr, struct cp_tls *data);
 void install_tls_segv_handler();
-extern int tls_hack;
+extern int emulate_tls;
 
 /* cp_fd.c */
 void fetch_chunks_fd(pid_t pid, int flags, struct list *l);

@@ -35,7 +35,7 @@ static void load_chunk_regs(struct user *user, int stopped)
 
     /* munmap resumer code except for us - except when we're needed for our
      * segvhandler */
-    if (!tls_hack) {
+    if (!emulate_tls) {
 	*cp++=0xb8;*(long*)(cp) = __NR_munmap; cp+=4; /* mov foo, %eax  */
 	*cp++=0xbb;*(long*)(cp) = RESUMER_START; cp+=4; /* mov foo, %ebx  */
 	*cp++=0xb9;*(long*)(cp) = RESUMER_END-RESUMER_START; cp+=4; /* mov foo, %ecx  */
@@ -43,7 +43,7 @@ static void load_chunk_regs(struct user *user, int stopped)
     }
 
     /* set up gs */
-    if (!tls_hack && r->gs != 0) {
+    if (!emulate_tls && r->gs != 0) {
 	*cp++=0x66;*cp++=0xb8; *(short*)(cp) = r->gs; cp+=2; /* mov foo, %eax  */
 	*cp++=0x8e;*cp++=0xe8; /* mov %eax, %gs */
     }
