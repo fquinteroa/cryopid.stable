@@ -60,13 +60,11 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 {
     static int rewrite_stage = 0;
     static unsigned char* rewrite_start = NULL;
-    static unsigned char rewrite_backup[12];
+    static unsigned char rewrite_backup[20];
+    static int rewrite_len;
 
     struct ucontext *uc = (struct ucontext*)ucontext;
     unsigned char *pt = (unsigned char*)uc->uc_mcontext.eip;
-
-    fprintf(stderr, "Rewrite stage: %d\n", rewrite_stage);
-    fflush(stderr);
 
     if (rewrite_stage == 1) {
 	pt = rewrite_start;
@@ -78,9 +76,11 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 	rewrite_stage++;
 	return;
     } else if (rewrite_stage == 2) {
-	*(long*)pt = 0x90909090;
-	pt[4] = 0xa3;
-	*(long*)(pt+5) = 0x00000000;
+	unsigned char *p;
+	for (p = pt; p < pt+rewrite_len; p++)
+	    *p = 0x90;
+	*p++ = 0xa3;
+	*(long*)(p) = 0x00000000;
 	rewrite_stage++;
 	return;
     } else if (rewrite_stage == 3) {
@@ -88,45 +88,57 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 	rewrite_stage = 0;
 	return;
     }
-    if (!memcmp(pt, "\x65\x83\x3d", 3)) {
-	/*
-	 *  8048344:   65 83 3d 0c 00 00 00    cmpl   $0x0,%gs:0xc
-	 *  804834b:   00 
-	 *  804834c:   83 3d af be ad de 00    cmpl   $0x0,0xdeadbeaf
-	 */
-	pt[0] = 0x83;
-	pt[1] = 0x3d;
-	*(long*)(pt+2) = tls_base_address+*(char*)(pt+3);
-	pt[6] = pt[7];
-	pt[7] = 0x90;
+    if (pt[0] == 0x65 &&
+	    ( /* If we have an easily shinkable instruction ... */
+		/*
+		 *  8048344:   65 83 3d 0c 00 00 00    cmpl   $0x0,%gs:0xc
+		 *  804834b:   00 
+		 *  804834c:   83 3d af be ad de 00    cmpl   $0x0,0xdeadbeaf
+		 */
+	      (pt[1] == 0x83 && pt[2] == 0x3d) ||
+		/*
+		 *  8048353:   65 8b 0d 00 00 00 00    mov    %gs:0x0,%ecx
+		 *  804835a:   8b 0d af be ad de       mov    0xdeadbeaf,%ecx
+		 */
+	      (pt[1] == 0x8b && (
+		pt[2] == 0x0d || /* ecx */
+		pt[2] == 0x35 || /* esi */
+		pt[2] == 0x15 || /* edx */
+		pt[2] == 0x2d || /* ebp */
+		pt[2] == 0x3d || /* edi */
+		0)) ||
+		/*
+		 * 804838e:   65 03 05 00 00 00 00    add    %gs:0x0,%eax
+		 * 8048395:   03 05 ef be ad de       add    0xdeadbeef,%eax
+		 */
+	      (pt[1] == 0x03 && (pt[2] == 0x05 || pt[2] == 0x15)) ||
+		/*
+		 * 80483ab:   65 89 3d 50 00 00 00    mov    %edi,%gs:0x50
+		 * 80483b2:   89 3d ef be ad de       mov    %edi,0xdeadbeef
+		 */
+	      (pt[1] == 0x89 && pt[2] == 0x3d) ||
+	      0))
+    {
+	pt[0] = 0x90;
+	*(long*)(pt+3) = tls_base_address + *(long*)(pt+3);
 	return;
     }
-    if (!memcmp(pt, "\x65\x8b", 2) && (
-	    pt[2] == 0x0d || /* ecx */
-	    pt[2] == 0x35 || /* esi */
-	    pt[2] == 0x15 || /* edx */
-	    pt[2] == 0x2d || /* ebp */
-	    pt[2] == 0x3d || /* edi */
-	    0)) {
-	/*
-	 *  8048353:   65 8b 0d 00 00 00 00    mov    %gs:0x0,%ecx
-	 *  804835a:   8b 0d af be ad de       mov    0xdeadbeaf,%ecx
-	 */
-	pt[0] = 0x8b;
-	pt[1] = pt[2];
-	*(long*)(pt+2) = tls_base_address+*(long*)(pt+3);
-	pt[6] = 0x90;
-	return;
-    }
-    if (!memcmp(pt, "\x65\x89\x3d", 3)) { /* XXX untested */
-	/*
-	 * 80483ab:   65 89 3d 50 00 00 00    mov    %edi,%gs:0x50
-	 * 80483b2:   89 3d ef be ad de       mov    %edi,0xdeadbeef
-	 */
-	pt[0] = 0x89;
-	pt[1] = 0x3d;
-	*(long*)(pt+2) = tls_base_address+*(long*)(pt+3);
-	pt[6] = 0x90;
+    if (pt[0] == 0x65 &&
+	    (
+		/*
+		 * 804838c:   65 a1 00 00 00 00       mov    %gs:0x0,%eax
+		 * 8048392:   a1 ef be ad de          mov    0xdeadbeef,%eax
+		 */
+	      (pt[1] == 0xa1) ||
+		/*
+		 * 80483c8:   65 a3 48 00 00 00       mov    %eax,%gs:0x48
+		 * 80483ce:   a3 ef be ad de          mov    %eax,0xdeadbeef
+		 */
+	      (pt[1] == 0xa3) ||
+	      0))
+    {
+	pt[0] = 0x90;
+	*(long*)(pt+2) = tls_base_address + *(long*)(pt+2);
 	return;
     }
     if (!memcmp(pt, "\x65\xc7\x05", 3)) { /* XXX untested */
@@ -171,22 +183,6 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 	pt[8] = 0x90;
 	return;
     }
-    if (pt[0] == 0x65 && (
-		pt[1] == 0xa1 || /* mov    %gs:0x0,%eax  */
-		pt[1] == 0xa3    /* mov    %eax,%gs:0x48 */
-		)) {
-	/*
-	 * 804838c:   65 a1 00 00 00 00       mov    %gs:0x0,%eax
-	 * 8048392:   a1 ef be ad de          mov    0xdeadbeef,%eax
-	 *
-	 * 80483c8:   65 a3 48 00 00 00       mov    %eax,%gs:0x48
-	 * 80483ce:   a3 ef be ad de          mov    %eax,0xdeadbeef
-	 */
-	pt[0] = pt[1];
-	*(long*)(pt+1) = tls_base_address+*(long*)(pt+2);
-	pt[5] = 0x90;
-	return;
-    }
     if (!memcmp(pt, "\x65\x89\x51", 3)) {
 	/*
 	 * 80483b1:   65 89 51 00             mov    %edx,%gs:0x0(%ecx)
@@ -202,11 +198,141 @@ static void tls_segv_handler(int sig, siginfo_t *si, void *ucontext)
 	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
 	rewrite_stage = 1;
 	rewrite_start = pt;
+	rewrite_len = 4;
+	return;
+    }
+    if (!memcmp(pt, "\x65\x89\x30", 3)) {
+	/*
+	 * 804838e:   65 89 30                mov    %esi,%gs:(%eax)
+	 * 8048391:   89 b0 ef be ad de       mov    %esi,0xdeadbeef(%eax)
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0x89;
+	pt[1] = 0xb0;
+	*(long*)(pt+2) = tls_base_address;
+	pt[6] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 3;
+	return;
+    }
+    if (!memcmp(pt, "\x65\x8b", 2) &&
+	    (pt[2] == 0x00 || /* eax -> eax */
+	     pt[2] == 0x0f || /* edi -> ecx */
+	     pt[2] == 0x10 || /* eax -> edx */
+	     0)) {
+	/*
+	 * 804838e:   65 8b 00                mov    %gs:(%eax),%eax
+	 * 8048391:   8b 80 ef be ad de       mov    0xdeadbeef(%eax),%eax
+	 *
+	 * 804838e:   65 8b 0f                mov    %gs:(%edi),%ecx
+	 * 8048391:   8b 8f ef be ad de       mov    0xdeadbeef(%edi),%ecx
+	 *
+	 * 804838e:   65 8b 10                mov    %gs:(%eax),%edx
+	 * 8048391:   8b 90 ef be ad de       mov    0xdeadbeef(%eax),%edx
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0x8b;
+	pt[1] = 0x80 | (pt[2] & 0x3f);
+	*(long*)(pt+2) = tls_base_address; pt[6] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 3;
+	return;
+    }
+    if (!memcmp(pt, "\x65\x8b", 2) &&
+	    (pt[2] == 0x00 || /* eax */
+	     0)) {
+	/*
+	 * 804838e:   65 8b 00                mov    %gs:(%eax),%eax
+	 * 8048391:   8b 80 ef be ad de       mov    0xdeadbeef(%eax),%eax
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0x8b;
+	pt[1] = 0x80 | (pt[2] & 0x0f);
+	*(long*)(pt+2) = tls_base_address; pt[6] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 3;
+	return;
+    }
+    if (!memcmp(pt, "\x65\x8b", 2) &&
+	    (pt[2] == 0x32 || /* edx */
+	     pt[2] == 0x30 || /* eax */
+	     0)) {
+	/*
+	 * 804838e:   65 8b 32                mov    %gs:(%edx),%esi
+	 * 8048391:   8b b2 ef be ad de       mov    0xdeadbeef(%edx),%esi
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0x8b;
+	pt[1] = 0xb0 | (pt[2] & 0x0f);
+	*(long*)(pt+2) = tls_base_address; pt[6] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 3;
+	return;
+    }
+    if (!memcmp(pt, "\x65\x89", 2) && (
+		pt[2] == 0x11 || /* ecx */
+		pt[2] == 0x10 || /* eax */
+		0)) {
+	/*
+	 * 804838e:   65 89 11                mov    %edx,%gs:(%ecx)
+	 * 8048391:   89 91 ef be ad de       mov    %edx,0xdeadbeef(%ecx)
+	 *
+	 * 804838e:   65 89 10                mov    %edx,%gs:(%eax)
+	 * 8048391:   89 90 ef be ad de       mov    %edx,0xdeadbeef(%eax)
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0x89;
+	pt[1] = 0x91;
+	*(long*)(pt+2) = tls_base_address;
+	pt[6] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 3;
+	return;
+    }
+    if (!memcmp(pt, "\x65\xc7\x00", 3)) {
+	/*
+	 * 804838e:   65 c7 00 54 53 52 51    movl   $0x51525354,%gs:(%eax)
+	 * 8048395:   c7 80 ef be ad de 54    movl   $0x51525354,0xdeadbeef(%eax)
+	 * 804839c:   53 52 51
+	 *
+	 * WARNING: XXX VOODOO HAPPENS HERE TOO
+	 */
+	memcpy(rewrite_backup, pt, sizeof(rewrite_backup));
+	pt[0] = 0xc7;
+	pt[1] = 0x80;
+	*(long*)(pt+6) = *(long*)(pt+3);
+	*(long*)(pt+2) = tls_base_address;
+	pt[10] = 0xa3;
+	*(long*)(pt+7) = 0x00000000; /* cause another segfault */
+	rewrite_stage = 1;
+	rewrite_start = pt;
+	rewrite_len = 7;
 	return;
     }
     if (old_segvhandler &&
 	    old_segvhandler != (void*)SIG_IGN && old_segvhandler != (void*)SIG_DFL)
 	old_segvhandler(sig, si, ucontext);
+    _exit(88); /* Something significant */
     printf("Unhandled segfault at 0x%08lx!\n", uc->uc_mcontext.eip);
     raise(SIGSEGV);
 }
