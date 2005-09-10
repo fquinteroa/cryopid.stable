@@ -68,7 +68,7 @@ void read_chunk_vma(void *fptr, int action)
 		c = checksum(buf, rlen, c);
 		remaining -= rlen;
 	    }
-	    if (remaining <= sizeof(buf)) {
+	    if (0 < remaining && remaining <= sizeof(buf)) {
 		/* padded out to a page, compute checksum anyway */
 		memset(buf, 0, sizeof(buf));
 		c = checksum(buf, remaining, c);

@@ -105,6 +105,7 @@ void write_chunk_fd(void *fptr, struct cp_fd *data)
 	    /* No extra write routines needed. */
 	    break;
 	case CP_CHUNK_FD_FILE:
+	    write_chunk_fd_file(fptr, &data->file);
 	    break;
 	case CP_CHUNK_FD_SOCKET:
 	    write_chunk_fd_socket(fptr, &data->socket);

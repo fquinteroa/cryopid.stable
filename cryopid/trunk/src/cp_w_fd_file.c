@@ -23,7 +23,7 @@ void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
     file->contents = NULL;
 
     do {
-	buf = malloc(bufsz);
+	buf = xmalloc(bufsz);
 	retsz = readlink(fd_path, buf, bufsz);
 	if (retsz <= 0) {
 	    fprintf(stderr, "Error reading FD %d: %s\n", fd, strerror(errno));
@@ -32,7 +32,7 @@ void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
 	    /* Read was successful */
 	    buf[retsz] = '\0';
 	    file->filename = strdup(buf);
-	    goto out;
+	    break;
 	}
 	/* Otherwise, double the buffer size and try again */
 	free(buf);

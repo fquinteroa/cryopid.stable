@@ -198,7 +198,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    vma->inode,
 	    vma->filename);
 
-    if (vma->prot == PROT_NONE) {
+    if (!(vma->prot & PROT_READ)) {
 	/* we need to modify it to be readable */
 	old_vma_prot = vma->prot;
 	do_mprotect(pid, vma->start, vma->length, PROT_READ);
@@ -220,13 +220,15 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     vma->checksum = checksum(vma->data, vma->length, 0);
 
     /* Cases where we want to keep the VMA in the image */
-    keep_vma_data = 0;
-    if (get_library_data ||
-	((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE)) || 
-	(vma->flags & MAP_ANONYMOUS))
-	keep_vma_data = 1;
+    keep_vma_data = (
+	    get_library_data ||
+	    ((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE)) || 
+	    (vma->flags & MAP_ANONYMOUS)
+	    );
 
-    /* If it's on disk and we're not saving libraries, checksum the source */
+    /* If it's on disk and we're not saving libraries, checksum the source to
+     * verify it really is the same.
+     */
     if (!keep_vma_data && vma->filename) {
 	int lfd;
 	int remaining;
@@ -248,10 +250,19 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    if (len > remaining)
 		len = remaining;
 	    rlen = read(lfd, buf, len);
-	    if (rlen <= 0)
+	    if (rlen == -1)
 		goto out_close;
+	    if (rlen == 0)
+		break;
 	    c = checksum(buf, rlen, c);
 	    remaining -= rlen;
+	}
+
+	if (0 < remaining && remaining <= sizeof(buf)) {
+	    /* padded out to a page, compute checksum anyway */
+	    memset(buf, 0, sizeof(buf));
+	    c = checksum(buf, remaining, c);
+	    remaining = 0;
 	}
 
 	/* So did we have a good checksum after all that? */

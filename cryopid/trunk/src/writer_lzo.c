@@ -60,14 +60,20 @@ static void *lzo_writer_init(int fd, int mode)
 static void lzo_read_uncompressed(void *fptr)
 {
     struct lzo_data *ld = fptr;
+    int ret;
 
-    if (read(ld->fd, &ld->out_len, sizeof(lzo_uint)) != sizeof(lzo_uint))
-	bail("read(rd->fd, len, %d) failed: %s", 
-		sizeof(lzo_uint), strerror(errno));
+    ret = read(ld->fd, &ld->out_len, sizeof(lzo_uint));
+    if (ret < 0)
+	bail("read(rd->fd, len, %d) failed: %s", sizeof(lzo_uint), strerror(errno));
+    if (ret != sizeof(lzo_uint))
+	bail("read(rd->fd, len, %d) failed: Short read", sizeof(lzo_uint));
 
-    if (read(ld->fd, ld->out, ld->out_len) != ld->out_len)
+    ret = read(ld->fd, ld->out, ld->out_len);
+    if (ret <  0)
 	bail("read(rd->fd, %p, %d) failed: %s", 
 		ld->out, ld->out_len, strerror(errno));
+    if (ret != ld->out_len)
+	bail("read(rd->fd, %p, %d) failed: Short read", ld->out, ld->out_len);
 }
 
 static void lzo_uncompress_chunk(void *fptr)
