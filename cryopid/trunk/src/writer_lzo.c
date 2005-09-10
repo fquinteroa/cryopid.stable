@@ -19,7 +19,7 @@ struct lzo_data {
     int fd;
     int mode;
     lzo_byte *in, *out, *wrkmem;
-    lzo_uint in_len, in_used, out_len, new_len;
+    lzo_uint in_len, in_used, out_len;
     int bytesin, bytesout; /* for statistics */
     int offset;
 };
@@ -27,13 +27,13 @@ struct lzo_data {
 static void *lzo_writer_init(int fd, int mode)
 {
     struct lzo_data *ld;
-    ld = xmalloc(sizeof(struct lzo_data));
 
+    if (mode == O_RDWR)
+	bail("lzo writer cannot be used for simultaneous reading and writing!");
+
+    ld = xmalloc(sizeof(struct lzo_data));
     ld->fd = fd;
     ld->mode = mode;
-
-    if (ld->mode == O_RDWR)
-	bail("lzo writer can not be used for simultaneous reading and writing!");
 
     if (lzo_init() != LZO_E_OK)
 	bail("lzo_init() failed!");
@@ -101,7 +101,6 @@ static int lzo_writer_read(void *fptr, void *buf, int len)
     while (rlen > 0) {
 	int bytes_ready = ld->in_len - ld->in_used;
 	int x;
-	/* debug("rlen is %d, bytes ready is %d", rlen, bytes_ready); */
 	if (bytes_ready == 0) {
 	    lzo_read_uncompressed(fptr);
 	    lzo_uncompress_chunk(fptr);
@@ -142,12 +141,21 @@ static void lzo_compress_chunk(void *fptr)
 static void lzo_write_compressed(void *fptr)
 {
     struct lzo_data *ld = fptr;
+    int ret;
 
     /* Write the size of the chunk first */
-    if (write(ld->fd, &ld->out_len, sizeof(lzo_uint)) < 0)
-	bail("lzo_write_compressed(): %s", strerror(errno));
-    if (write(ld->fd, ld->out, ld->out_len) != ld->out_len)
-	bail("lzo_write_compressed(): %s", strerror(errno));
+    ret = write(ld->fd, &ld->out_len, sizeof(int));
+    if (ret < 0)
+	bail("write(ld->fd, len, %d) failed: %s", sizeof(int), strerror(errno));
+    if (ret != sizeof(int))
+	bail("write(ld->fd, len, %d) failed: Short write", sizeof(int));
+
+    ret = write(ld->fd, ld->out, ld->out_len);
+    if (ret < 0)
+	bail("write(ld->fd, %p, %d) failed: %s",
+		ld->out, ld->out_len, strerror(errno));
+    if (ret != ld->out_len)
+	bail("write(ld->fd, %p, %d) failed: Short write", ld->out, ld->out_len);
 }
 
 static int lzo_writer_write(void *fptr, void *buf, int len)

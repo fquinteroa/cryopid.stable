@@ -71,7 +71,7 @@ Signal Handlers:
 Compression:
 + LZF
 - LZF in-place decompression
-- GZIP
++ GZIP
 
 
 Graphics:
