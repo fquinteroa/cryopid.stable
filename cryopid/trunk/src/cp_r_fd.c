@@ -83,7 +83,9 @@ void read_chunk_fd(void *fptr, int action)
 	    fcntl(fd.fd, F_SETFD, fd.close_on_exec);
 	if (fd.fcntl_status != -1)
 	    fcntl(fd.fd, F_SETFL, fd.fcntl_status);
-	if (fd.offset != -1)
+	if (fd.offset == -2)
+	    lseek(fd.fd, 0, SEEK_END);
+	else if (fd.offset != -1)
 	    lseek(fd.fd, fd.offset, SEEK_SET);
     }
 

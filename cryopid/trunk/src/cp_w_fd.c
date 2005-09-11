@@ -210,6 +210,8 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 		fetch_fd_file(pid, flags, chunk->fd.fd, stat_buf.st_ino,
 			tmp_fn, &chunk->fd.file);
 		chunk->fd.type = CP_CHUNK_FD_FILE;
+		if (stat_buf.st_size == chunk->fd.offset)
+		    chunk->fd.offset = -2; /* Seek to end */
 		break;
 	    case S_IFBLK:
 	    case S_IFDIR:
