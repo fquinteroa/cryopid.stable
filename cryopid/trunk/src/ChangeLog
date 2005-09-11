@@ -1,0 +1,4 @@
+0.4.2
+ * Seek to end of file if we started off there (eg, logfiles).
+ * Remove unused/unimplemented flags from getopt.
+ * Enable linking against uclibc.
