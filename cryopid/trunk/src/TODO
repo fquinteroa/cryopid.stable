@@ -39,7 +39,7 @@ TLS:
 + tls hack for porting 2.6 processes to 2.4
 
 File descriptors:
-- files
++ files
 - file contents
 + fcntl state - blocking & close_on_exec
 - fcntl state - locks

@@ -25,9 +25,9 @@ void usage(char* argv0)
 "This is used to suspend the state of a single running process to a\n"
 "self-executing file.\n"
 "\n"
-"    -w <writer> Nomiate an output writer to use.\n"
 "    -l      Include libraries in the image of the file for a full image.\n"
 /*
+"    -w <writer> Nomiate an output writer to use.\n"
 "    -f      Save the contents of open files into the image.\n"
 "    -c      Save children of this process as well.\n"
 */
@@ -52,13 +52,15 @@ int main(int argc, char** argv)
 	int option_index = 0;
 	static struct option long_options[] = {
 	    {"libraries", 0, 0, 'l'},
+	    /*
 	    {"files", 0, 0, 'f'},
 	    {"children", 0, 0, 'c'},
 	    {"writer", 1, 0, 'w'},
+	    */
 	    {0, 0, 0, 0},
 	};
 
-	c = getopt_long(argc, argv, "lfcw:", long_options, &option_index);
+	c = getopt_long(argc, argv, "l"/*"fcw:"*/, long_options, &option_index);
 	if (c == -1)
 	    break;
 	switch(c) {
