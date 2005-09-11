@@ -15,7 +15,7 @@ General:
   not use mmap somehow).
 - Better remote syscall support, ala _syscall{0..5}.
 - Split out write vs read code. Why isn't the linker smart enough to do this?
-- Figure a sane way of building & linking against uclibc or dietlibc.
++ Figure a sane way of building & linking against uclibc or dietlibc.
 - Implement make-static cleanly.
 
 Misc:

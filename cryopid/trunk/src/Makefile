@@ -6,14 +6,14 @@ STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
-CFLAGS = -g -Wall -O0 -fpic
+CFLAGS = -g -Wall -Os -fpic
 
 CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
-#LIBC = -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
-LIBC = -lc
+LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
+#LIBC = -lc
 
 all: $(TARGETS)
 
@@ -26,10 +26,10 @@ stub-image-%.o: stub-%
 
 stub-%: stub.o supervisor.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
-	$(CC) -static -fpic -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -lz
+	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -lz
 	@strip $@
 	@$(DEPAX) $@
 
 freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process.o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
 	@echo Linking $@
-	$(CC) -Os -o $@ $^ $(LIBC) -lz
+	$(CC) -Os -o $@ $^ -lz

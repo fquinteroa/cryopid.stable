@@ -71,12 +71,10 @@ static void gzip_uncompress_chunk(void *fptr)
     struct gzip_data *zd = fptr;
     int r;
 
-    int ret;
-
     if (zd->c_stream.avail_in == 0) {
 	zd->out_len = read(zd->fd, zd->out, OUT_LEN);
 	if (zd->out_len <  0)
-	    bail("read(rd->fd, %p, %d) failed: %s", zd->out, OUT_LEN, strerror(errno));
+	    bail("read(rd->fd, %p, %ld) failed: %s", zd->out, OUT_LEN, strerror(errno));
 
 	zd->c_stream.next_in   = zd->out;
 	zd->c_stream.avail_in  = zd->out_len;

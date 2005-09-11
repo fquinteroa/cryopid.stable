@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
+#include <sys/mman.h>
 
 #include "cryopid.h"
 
@@ -34,12 +35,7 @@ int syscall_check(int retval, int can_be_fake, char* desc, ...)
  * FIXME: do something smarter. Can we persuade malloc to stick to brk'ing and
  * not mmap()?
  */
-static void cp_malloc_init_hook();
 
-static void* (*old_malloc_hook)(size_t, const void *);
-void (*__malloc_initialize_hook) (void) = cp_malloc_init_hook;
-
-#include <sys/mman.h>
 static void *cp_malloc_hook(size_t size, const void *caller)
 {
     static long next_free_addr = MALLOC_START;
@@ -61,6 +57,20 @@ static void cp_free_hook(void *ptr, const void *caller)
      */
 }
 
+#ifdef PROVIDE_MALLOC
+/* We provide malloc() and free() */
+
+void *malloc(size_t size) { return cp_malloc_hook(size, NULL); }
+void free(void *mem) { return cp_free_hook(mem, NULL); }
+
+#else
+/* We're hooking into libc's malloc */
+
+static void cp_malloc_init_hook();
+
+static void* (*old_malloc_hook)(size_t, const void *);
+void (*__malloc_initialize_hook) (void) = cp_malloc_init_hook;
+
 static void cp_malloc_init_hook()
 {
     old_malloc_hook = __malloc_hook;
@@ -68,7 +78,9 @@ static void cp_malloc_init_hook()
     __free_hook = cp_free_hook;
 }
 
-#endif
+#endif /* PROVIDE_MALLOC */
+
+#endif /* COMPILING_STUB */
 
 void *xmalloc(int len)
 {
