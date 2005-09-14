@@ -6,6 +6,8 @@ STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
+ARCH=i386
+
 CFLAGS = -g -Wall -Os -fpic
 
 CHPAX = /sbin/chpax
@@ -24,12 +26,12 @@ stub-image-%.o: stub-%
 	@echo Generating binary object of $^
 	@$(LD) -m elf_i386 --format binary --oformat elf32-i386 -r $< -o $@
 
-stub-%: stub.o supervisor.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
+stub-%: stub_$(ARCH).o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
 	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -lz
 	@strip $@
 	@$(DEPAX) $@
 
-freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process.o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
+freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process_$(ARCH).o elfwriter.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
 	@echo Linking $@
 	$(CC) -Os -o $@ $^ -lz
