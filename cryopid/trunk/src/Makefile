@@ -6,7 +6,10 @@ STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
+ARCH=$(shell arch)
+ifneq ($(filter i%86,$(ARCH)), )
 ARCH=i386
+endif
 
 CFLAGS = -g -Wall -Os -fpic
 
