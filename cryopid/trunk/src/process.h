@@ -1,18 +1,7 @@
 #ifndef _PROCESS_H_
 #define _PROCESS_H_
 
-#include <malloc.h>
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <getopt.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/ptrace.h>
-#include <sys/mman.h>
-#include <signal.h>
 #include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <linux/types.h>
@@ -43,8 +32,14 @@ struct proc_header_t {
 #define GET_LIBRARIES_TOO          0x01
 #define GET_OPEN_FILE_CONTENTS     0x02
 
+int do_syscall(pid_t pid, struct user_regs_struct *regs);
+int is_in_syscall(pid_t pid, void* eip);
+void set_syscall_return(struct user* user, unsigned long val);
+int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
+int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
+
 extern off_t r_lseek(pid_t pid, int fd, off_t offset, int whence);
-extern int r_fcntl64(pid_t pid, int fd, int cmd);
+extern int r_fcntl(pid_t pid, int fd, int cmd);
 extern int r_mprotect(pid_t pid, void *start, size_t len, int flags);
 extern int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa,
 	struct k_sigaction *oksa, size_t masksz);

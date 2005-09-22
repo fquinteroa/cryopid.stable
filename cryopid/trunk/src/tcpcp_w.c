@@ -23,6 +23,7 @@
 
 #include "cryopid.h"
 #include "cpimage.h"
+#include "process.h"
 #include "tcpcp.h"
 extern int r_socketcall(pid_t pid, int call, void* args);
 

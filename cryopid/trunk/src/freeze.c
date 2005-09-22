@@ -10,6 +10,9 @@
 #include <linux/user.h>
 #include <sys/ptrace.h>
 #include <fcntl.h>
+#include <getopt.h>
+#include <string.h>
+#include <unistd.h>
 #include "cryopid.h"
 #include "cpimage.h"
 #include "process.h"

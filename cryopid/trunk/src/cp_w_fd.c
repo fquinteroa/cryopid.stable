@@ -111,8 +111,8 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 	else
 	    chunk->fd.mode = O_RDONLY;
 
-	chunk->fd.close_on_exec = r_fcntl64(pid, chunk->fd.fd, F_GETFD);
-	chunk->fd.fcntl_status = r_fcntl64(pid, chunk->fd.fd, F_GETFL);
+	chunk->fd.close_on_exec = r_fcntl(pid, chunk->fd.fd, F_GETFD);
+	chunk->fd.fcntl_status = r_fcntl(pid, chunk->fd.fd, F_GETFL);
 	chunk->fd.offset = r_lseek(pid, chunk->fd.fd, 0, SEEK_CUR);
 
 	/* This time stat the file/fifo/socket/etc, not the link */

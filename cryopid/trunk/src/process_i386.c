@@ -186,15 +186,19 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs)
     return 1;
 }
 
-int is_in_syscall(pid_t pid, void* eip)
+int is_in_syscall(pid_t pid, struct user *user)
 {
     long inst;
-    inst = ptrace(PTRACE_PEEKDATA, pid, eip-2, 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.eip-2, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
     }
     return (inst&0xffff) == 0x80cd;
+}
+
+void set_syscall_return(struct user* user, unsigned long val) {
+    user->regs.eax = val;
 }
 
 static int process_is_stopped(pid_t pid)
@@ -422,5 +426,15 @@ __rsyscall3(int, mprotect, void*, start, size_t, len, int, flags);
 __rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
 __rsyscall3(int, ioctl, int, fd, int, req, void*, val);
 __rsyscall2(int, socketcall, int, call, void*, args);
+
+int r_fcntl(pid_t pid, int fd, int cmd)
+{
+    return __r_fcntl64(pid, fd, cmd);
+}
+
+int r_lseek(pid_t pid, int fd, off_t offset, int whence)
+{
+    return __r_lseek(pid, fd, offset, whence);
+}
 
 /* vim:set ts=8 sw=4 noet: */
