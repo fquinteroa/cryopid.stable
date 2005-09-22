@@ -19,30 +19,6 @@
 #define O_NOATIME	01000000
 #endif /* O_NOATIME */
 
-static off_t get_file_offset(pid_t pid, int fd, off_t offset, int whence)
-{
-    struct user_regs_struct r;
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
-	bail("ptrace(GETREGS): %s", strerror(errno));
-
-    /* FIXME: large file support? llseek and offset to 64-bit? */
-    r.eax = __NR_lseek;
-    r.ebx = fd;
-    r.ecx = offset;
-    r.edx = whence;
-
-    if (!do_syscall(pid, &r)) return 0;
-
-    /* Error checking! */
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return (off_t)(-1);
-    }
-
-    return r.eax;
-}
-
 static int get_fcntl_status(pid_t pid, int fd)
 {
     struct user_regs_struct r;
@@ -181,7 +157,7 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 
 	chunk->fd.close_on_exec = get_fcntl_close_on_exec(pid, chunk->fd.fd);
 	chunk->fd.fcntl_status = get_fcntl_status(pid, chunk->fd.fd);
-	chunk->fd.offset = get_file_offset(pid, chunk->fd.fd, 0, SEEK_CUR);
+	chunk->fd.offset = r_lseek(pid, chunk->fd.fd, 0, SEEK_CUR);
 
 	/* This time stat the file/fifo/socket/etc, not the link */
 	if (stat(tmp_fn, &stat_buf) < 0)

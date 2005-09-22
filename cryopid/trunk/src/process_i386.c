@@ -291,4 +291,123 @@ out_ptrace:
 	abort();
 }
 
+static inline unsigned long __remote_syscall(pid_t pid,
+	int syscall_no,
+	int use_ebx, unsigned long ebx,
+	int use_ecx, unsigned long ecx,
+	int use_edx, unsigned long edx,
+	int use_esi, unsigned long esi,
+	int use_edi, unsigned long edi)
+{
+    struct user_regs_struct orig_regs, regs;
+    unsigned long loc, old_insn, ret;
+    int status;
+
+    if (save_registers(pid, &orig_regs) < 0)
+	abort();
+
+    memcpy(&regs, &orig_regs, sizeof(regs));
+
+    loc = scribble_zone+0x10;
+
+    old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
+    if (errno) {
+	perror("ptrace peektext");
+	abort();
+    }
+
+    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
+	perror("ptrace poketext");
+	abort();
+    }
+
+    regs->eax = syscall_no;
+    if (use_ebx) regs->ebx = ebx;
+    if (use_ecx) regs->ecx = ecx;
+    if (use_edx) regs->edx = edx;
+    if (use_esi) regs->esi = esi;
+    if (use_edi) regs->edi = edi;
+
+    /* Set up registers for ptrace syscall */
+    regs->eip = loc;
+    if (restore_registers(pid, regs) < 0)
+	abort();
+
+    /* Execute call */
+    if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
+	perror("ptrace singlestep");
+	abort();
+    }
+    ret = waitpid(pid, &status, 0);
+    if (ret == -1) {
+	perror("Failed to wait for child");
+	abort();
+    }
+
+    /* Get our new registers */
+    if (save_registers(pid, regs) < 0)
+	abort();
+
+    /* Return everything back to normal */
+    if (restore_registers(pid, &orig_regs) < 0)
+	abort();
+
+    if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
+	perror("ptrace poketext");
+	abort();
+    }
+
+    return regs->eax;
+}
+
+#define __rsyscall0(type,name) \
+    type r_##name(pid_t pid) { \
+	return (type)__remote_syscall(pid, __NR_##name,0,0,0,0,0,0,0,0,0,0); \
+}
+
+#define __rsyscall1(type,name,type1,arg1) \
+    type r_##name(pid_t pid, type1 arg1) { \
+	return (type)__remote_syscall(pid, __NR_##name,1,(unsigned long)arg1, \
+		0,0,0,0,0,0,0,0); \
+}
+
+#define __rsyscall2(type,name,type1,arg1,type2,arg2) \
+    type r_##name(pid_t pid, type1 arg1, type2 arg2) { \
+	return (type)__remote_syscall(pid, __NR_##name,1, \
+		(unsigned long)arg1, \
+		(unsigned long)arg2, \
+		0,0,0,0,0,0); \
+}
+
+#define __rsyscall3(type,name,type1,arg1,type2,arg2,type3,arg3) \
+    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3) { \
+	return (type)__remote_syscall(pid, __NR_##name,1, \
+		(unsigned long)arg1, \
+		(unsigned long)arg2, \
+		(unsigned long)arg3, \
+		0,0,0,0); \
+}
+
+#define __rsyscall4(type,name,type1,arg1,type2,arg2,type3,arg3,type4,arg4) \
+    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4) { \
+	return (type)__remote_syscall(pid, __NR_##name,1, \
+		(unsigned long)arg1, \
+		(unsigned long)arg2, \
+		(unsigned long)arg3, \
+		(unsigned long)arg4, \
+		0,0); \
+}
+
+#define __rsyscall5(type,name,type1,arg1,type2,arg2,type3,arg3,type4,arg4,type5,arg5) \
+    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4, type5 arg5) { \
+	return (type)__remote_syscall(pid, __NR_##name,1, \
+		(unsigned long)arg1, \
+		(unsigned long)arg2, \
+		(unsigned long)arg3, \
+		(unsigned long)arg4, \
+		(unsigned long)arg5) \
+}
+
+__rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
+
 /* vim:set ts=8 sw=4 noet: */
