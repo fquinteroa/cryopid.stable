@@ -24,26 +24,18 @@
 #include "cryopid.h"
 #include "cpimage.h"
 #include "tcpcp.h"
+extern int r_socketcall(pid_t pid, int call, void* args);
 
 /* ----- Interface to low-level API ---------------------------------------- */
 
 
 static int tcp_max_ici_size(pid_t pid, int s,int *size)
 {
-    struct user_regs_struct r;
+    int ret;
     int size_size = sizeof(*size);
     long args[5];
 
     /* return getsockopt(s,SOL_TCP,TCP_MAXICISIZE,size,&size_size); */
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
-	perror("ptrace(GETREGS)");
-	return 0;
-    }
-
-    r.eax = __NR_socketcall;
-    r.ebx = SYS_GETSOCKOPT;
-    r.ecx = scribble_zone+0x40;
 
     args[0] = s;
     args[1] = SOL_TCP;
@@ -54,15 +46,10 @@ static int tcp_max_ici_size(pid_t pid, int s,int *size)
     memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
     memcpy_into_target(pid, (void*)(scribble_zone+0x70), &size_size, sizeof(size_size));
 
-    if (!do_syscall(pid, &r)) {
-	errno = ENOSYS;
-	return -1;
-    }
+    ret = r_socketcall(pid, SYS_GETSOCKOPT, (void*)(scribble_zone+0x40));
 
-    if (r.eax < 0) {
-	errno = -r.eax;
+    if (ret == -1)
 	return -1;
-    }
 
     memcpy_from_target(pid, size, (void*)(scribble_zone+0x60), size_size);
 
@@ -72,19 +59,10 @@ static int tcp_max_ici_size(pid_t pid, int s,int *size)
 
 static int tcp_get_ici(pid_t pid, int s, void *ici, int size)
 {
-    struct user_regs_struct r;
+    int ret;
     long args[5];
 
     /* return getsockopt(s,SOL_TCP,TCP_ICI,ici,&size); */
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
-	perror("ptrace(GETREGS)");
-	return 0;
-    }
-
-    r.eax = __NR_socketcall;
-    r.ebx = SYS_GETSOCKOPT;
-    r.ecx = scribble_zone+0x40;
 
     args[0] = s;
     args[1] = SOL_TCP;
@@ -95,15 +73,10 @@ static int tcp_get_ici(pid_t pid, int s, void *ici, int size)
     memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
     memcpy_into_target(pid, (void*)(scribble_zone+0x60), &size, sizeof(size));
 
-    if (!do_syscall(pid, &r)) {
-	errno = ENOSYS;
-	return -1;
-    }
+    ret = r_socketcall(pid, SYS_GETSOCKOPT, (void*)(scribble_zone+0x40));
 
-    if (r.eax < 0) {
-	errno = -r.eax;
+    if (ret)
 	return -1;
-    }
 
     memcpy_from_target(pid, ici, (void*)(scribble_zone+0x70), size);
 

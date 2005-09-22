@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "cpimage.h"
+#include "process.h"
 #include "cryopid.h"
 
 long scribble_zone = 0; /* somewhere to scribble on in child */
@@ -27,29 +28,6 @@ void write_chunk_vma(void *fptr, struct cp_vma *data)
     write_bit(fptr, &data->is_heap, sizeof(data->is_heap));
     if (data->have_data)
 	write_bit(fptr, data->data, data->length);
-}
-
-static int do_mprotect(pid_t pid, long start, int len, int flags)
-{
-    struct user_regs_struct r;
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
-	bail("ptrace(GETREGS): %s", strerror(errno));
-
-    r.eax = __NR_mprotect;
-    r.ebx = start;
-    r.ecx = len;
-    r.edx = flags;
-
-    if (!do_syscall(pid, &r)) return 0;
-
-    /* Error checking! */
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return -1;
-    }
-
-    return r.eax;
 }
 
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
@@ -201,7 +179,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     if (!(vma->prot & PROT_READ)) {
 	/* we need to modify it to be readable */
 	old_vma_prot = vma->prot;
-	do_mprotect(pid, vma->start, vma->length, PROT_READ);
+	r_mprotect(pid, (void*)vma->start, vma->length, PROT_READ);
     }
 
     /* Decide if it's scribble worthy - find a nice anonymous mapping */
@@ -283,7 +261,7 @@ out:
     }
 
     if (old_vma_prot != -1)
-	do_mprotect(pid, vma->start, vma->length, old_vma_prot);
+	r_mprotect(pid, (void*)vma->start, vma->length, old_vma_prot);
 
     return 1;
 }

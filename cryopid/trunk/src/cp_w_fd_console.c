@@ -10,27 +10,17 @@
 #include <unistd.h>
 
 #include "cryopid.h"
+#include "process.h"
 #include "cpimage.h"
 
 static int get_termios(pid_t pid, int fd, struct termios *t)
 {
-    struct user_regs_struct r;
+    int ret;
 
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1) {
-	perror("ptrace(GETREGS)");
-	return 0;
-    }
-
-    r.eax = __NR_ioctl;
-    r.ebx = fd;
-    r.ecx = TCGETS;
-    r.edx = scribble_zone+0x50;
-
-    if (!do_syscall(pid, &r)) return 0;
+    ret = r_ioctl(pid, fd, TCGETS, (void*)(scribble_zone+0x50));
 
     /* Error checking! */
-    if (r.eax < 0) {
-	errno = -r.eax;
+    if (ret == -1) {
 	perror("target ioctl");
 	return 0;
     }

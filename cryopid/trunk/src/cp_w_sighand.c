@@ -5,26 +5,18 @@
 #include <string.h>
 
 #include "cryopid.h"
+#include "process.h"
 #include "cpimage.h"
 
 static int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa)
 {
-    struct user_regs_struct r;
+    int ret;
 
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
-	bail("ptrace(GETREGS)");
-
-    r.eax = __NR_rt_sigaction;
-    r.ebx = sig;
-    r.ecx = 0;
-    r.edx = scribble_zone+0x100;
-    r.esi = sizeof(ksa->sa_mask);
-
-    if (!do_syscall(pid, &r)) return 0;
+    ret = r_rt_sigaction(pid, sig, NULL, (void*)(scribble_zone+0x100), sizeof(ksa->sa_mask));
 
     /* Error checking! */
-    if (r.eax < 0)
-	bail("rt_sigaction on target: %s", strerror(-r.eax));
+    if (ret == -1)
+	bail("rt_sigaction on target: %s", strerror(errno));
 
     memcpy_from_target(pid, ksa, (void*)(scribble_zone+0x100), sizeof(struct k_sigaction));
 

@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "cryopid.h"
+#include "process.h"
 #include "cpimage.h"
 
 /* Some possibly not declared defines */
@@ -18,51 +19,6 @@
 #ifndef O_NOATIME
 #define O_NOATIME	01000000
 #endif /* O_NOATIME */
-
-static int get_fcntl_status(pid_t pid, int fd)
-{
-    struct user_regs_struct r;
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
-	bail("ptrace(GETREGS): %s", strerror(errno));
-
-    r.eax = __NR_fcntl64;
-    r.ebx = fd;
-    r.ecx = F_GETFL;
-
-    if (!do_syscall(pid, &r)) return 0;
-
-    /* Error checking! */
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return -1;
-    }
-
-    debug("get_fcntl_status of fd %d is %ld", fd, r.eax);
-    return r.eax;
-}
-
-static int get_fcntl_close_on_exec(pid_t pid, int fd)
-{
-    struct user_regs_struct r;
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &r) == -1)
-	bail("ptrace(GETREGS): %s", strerror(errno));
-
-    r.eax = __NR_fcntl64;
-    r.ebx = fd;
-    r.ecx = F_GETFD;
-
-    if (!do_syscall(pid, &r)) return 0;
-
-    /* Error checking! */
-    if (r.eax < 0) {
-	errno = -r.eax;
-	return -1;
-    }
-
-    return r.eax;
-}
 
 void write_chunk_fd(void *fptr, struct cp_fd *data)
 {
@@ -155,8 +111,8 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 	else
 	    chunk->fd.mode = O_RDONLY;
 
-	chunk->fd.close_on_exec = get_fcntl_close_on_exec(pid, chunk->fd.fd);
-	chunk->fd.fcntl_status = get_fcntl_status(pid, chunk->fd.fd);
+	chunk->fd.close_on_exec = r_fcntl64(pid, chunk->fd.fd, F_GETFD);
+	chunk->fd.fcntl_status = r_fcntl64(pid, chunk->fd.fd, F_GETFL);
 	chunk->fd.offset = r_lseek(pid, chunk->fd.fd, 0, SEEK_CUR);
 
 	/* This time stat the file/fifo/socket/etc, not the link */
