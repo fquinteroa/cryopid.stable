@@ -99,7 +99,7 @@ void read_chunk_vma(void *fptr, int action)
 	    brk(vma.data+vma.length);
 	    /* assert(sbrk(0) == vma.data+vma.length); */
 	}
-	syscall_check((int)mmap((void*)vma.data, vma.length,
+	syscall_check((long)mmap((void*)vma.data, vma.length,
 		    PROT_READ | PROT_WRITE,
 		    MAP_ANONYMOUS | MAP_FIXED | vma.flags, -1, 0),
 		0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, -1, 0)",
@@ -112,7 +112,7 @@ void read_chunk_vma(void *fptr, int action)
 	if (fd == -1)
 	    syscall_check(fd = open(vma.filename, O_RDONLY), 0,
 		    "open(%s)", vma.filename);
-	syscall_check((int)mmap((void*)vma.data, vma.length,
+	syscall_check((long)mmap((void*)vma.data, vma.length,
 		    vma.prot,
 		    MAP_FIXED | vma.flags, fd, vma.pg_off),
 		0, "mmap(0x%lx, 0x%lx, 0x%x, 0x%x, %d, 0x%x)",

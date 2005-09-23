@@ -3,8 +3,8 @@ ifneq ($(filter i%86,$(ARCH)), )
 ARCH=i386
 endif
 
-R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_tls.o cp_r_vma.o tcpcp_r.o arch/arch_r_objs.o
-W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_tls.o cp_w_vma.o tcpcp_w.o arch/arch_w_objs.o
+R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o tcpcp_r.o arch/arch_r_objs.o
+W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o tcpcp_w.o arch/arch_w_objs.o
 COMMON_OBJS = common.c list.o arch/asmfuncs.o
 # STUB_TYPES = raw buffered lzo gzip
 STUB_TYPES = gzip
@@ -17,8 +17,8 @@ CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
-LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
-#LIBC = -lc
+#LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
+LIBC = -lc
 
 all: arch $(TARGETS)
 
@@ -35,7 +35,7 @@ stub-image-%.o: stub-%
 
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
-	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tstub-linking.x -Os -o $@ $^ $(LIBC) -lz
+	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tarch/stub-linking.x -Os -o $@ $^ $(LIBC) -lz
 	@strip $@
 	@$(DEPAX) $@
 

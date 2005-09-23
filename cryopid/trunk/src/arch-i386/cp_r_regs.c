@@ -57,9 +57,9 @@ static void load_chunk_regs(struct user *user, int stopped)
 
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {
-	*cp++=0xb8;*(long*)(cp) = 37; cp+=4; /* mov $37, %eax (kill) */
+	*cp++=0xb8;*(long*)(cp) = __NR_kill; cp+=4; /* mov $37, %eax (kill) */
 	*cp++=0x31;*cp++=0xdb;               /* xor %ebx, %ebx       */
-	*cp++=0xb9;*(long*)(cp) = 19; cp+=4; /* mov $19, %ecx (SIGSTOP) */
+	*cp++=0xb9;*(long*)(cp) = SIGSTOP; cp+=4; /* mov $19, %ecx (SIGSTOP) */
 	*cp++=0xcd;*cp++=0x80;               /* int $0x80 */
     }
 
