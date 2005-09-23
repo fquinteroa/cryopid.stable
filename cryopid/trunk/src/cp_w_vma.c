@@ -15,12 +15,12 @@ long scribble_zone = 0; /* somewhere to scribble on in child */
 
 void write_chunk_vma(void *fptr, struct cp_vma *data)
 {
-    write_bit(fptr, &data->start, sizeof(int));
-    write_bit(fptr, &data->length, sizeof(int));
+    write_bit(fptr, &data->start, sizeof(unsigned long));
+    write_bit(fptr, &data->length, sizeof(unsigned long));
     write_bit(fptr, &data->prot, sizeof(int));
     write_bit(fptr, &data->flags, sizeof(int));
     write_bit(fptr, &data->dev, sizeof(int));
-    write_bit(fptr, &data->pg_off, sizeof(int));
+    write_bit(fptr, &data->pg_off, sizeof(long));
     write_bit(fptr, &data->inode, sizeof(int));
     write_string(fptr, data->filename);
     write_bit(fptr, &data->have_data, sizeof(data->have_data));

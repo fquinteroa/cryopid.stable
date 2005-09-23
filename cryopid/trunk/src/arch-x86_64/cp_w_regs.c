@@ -13,15 +13,15 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     struct cp_chunk *chunk = NULL;
     struct user *user_data;
     long pos;
-    int* user_data_ptr;
+    long* user_data_ptr;
 
     user_data = xmalloc(sizeof(struct user));
-    user_data_ptr = (int*)user_data;
+    user_data_ptr = (long*)user_data;
 
     /* We have a memory segment. We should retrieve its data */
-    for(pos = 0; pos < sizeof(struct user)/sizeof(int); pos++) {
+    for(pos = 0; pos < sizeof(struct user)/sizeof(long); pos++) {
 	user_data_ptr[pos] =
-	    ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*4), NULL);
+	    ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*sizeof(long)), NULL);
 	if (errno != 0) {
 	    perror("ptrace(PTRACE_PEEKDATA): ");
 	}

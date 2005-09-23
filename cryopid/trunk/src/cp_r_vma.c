@@ -17,12 +17,12 @@ void read_chunk_vma(void *fptr, int action)
     struct cp_vma vma;
     int fd;
 
-    read_bit(fptr, &vma.start, sizeof(int));
-    read_bit(fptr, &vma.length, sizeof(int));
+    read_bit(fptr, &vma.start, sizeof(unsigned long));
+    read_bit(fptr, &vma.length, sizeof(unsigned long));
     read_bit(fptr, &vma.prot, sizeof(int));
     read_bit(fptr, &vma.flags, sizeof(int));
     read_bit(fptr, &vma.dev, sizeof(int));
-    read_bit(fptr, &vma.pg_off, sizeof(int));
+    read_bit(fptr, &vma.pg_off, sizeof(long));
     read_bit(fptr, &vma.inode, sizeof(int));
     vma.filename = read_string(fptr, NULL, 1024);
 

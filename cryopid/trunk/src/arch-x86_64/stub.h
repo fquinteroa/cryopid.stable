@@ -44,10 +44,6 @@ static inline void relocate_stack()
     __asm__ ("addq %0, %%rbp" : : "a"(top_of_new_stack - top_of_old_stack));
 
     /* unmap absolutely everything above us! */
-    syscall_check(
-	    munmap(top_of_our_memory,
-		(top_of_all_memory - top_of_our_memory)),
-		0, "munmap(stack)");
 }
 
 extern void seek_to_image(int fd);

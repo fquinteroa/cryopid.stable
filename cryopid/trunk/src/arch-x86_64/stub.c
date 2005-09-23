@@ -5,10 +5,36 @@
 #include <string.h>
 #include <unistd.h>
 #include <elf.h>
+#include <sys/mman.h>
+#include <sys/prctl.h>
+#include <asm/prctl.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
 #include "process.h"
+
+void set_fs()
+{
+    extern int arch_prctl(int code, unsigned long addr);
+    unsigned long tls_seg;
+    unsigned long brk, brk_start;
+    unsigned long cur_fs;
+    /* This assumes that our TLS segment is in the heap, and the heap is currently
+     * less than a page big... it could break in awful ways if not...
+     *
+     * Our FS segment is normally mapped at the top of the heap, but because the
+     * binary is modified to place the heap where the executable had it, the FS
+     * segment gets unmapped when we relocate the stub. Hence we have to relocate
+     * our TLS segment first.
+     */
+    brk = (unsigned long)sbrk(0);
+    tls_seg = (unsigned long)mmap((void*)0x100000, PAGE_SIZE, PROT_READ|PROT_WRITE,
+	    MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+    arch_prctl(ARCH_GET_FS, (long)&cur_fs);
+    brk_start = brk & ~(PAGE_SIZE-1);
+    memcpy((void*)tls_seg, (void*)brk_start, brk-brk_start);
+    arch_prctl(ARCH_SET_FS, tls_seg + (cur_fs - brk_start));
+}
 
 void seek_to_image(int fd)
 {
@@ -61,7 +87,7 @@ void seek_to_image(int fd)
 	syscall_check(
 		lseek(fd, s.sh_offset, SEEK_SET), 0, "lseek");
 
-	safe_read(fd, &offset, 4, "offset");
+	safe_read(fd, &offset, sizeof(offset), "offset");
 
 	syscall_check(
 		lseek(fd, offset, SEEK_SET), 0, "lseek");

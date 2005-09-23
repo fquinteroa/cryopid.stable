@@ -115,7 +115,7 @@ struct cp_vma {
     int flags;
     int dev;
     long pg_off;
-    long inode;
+    int inode;
     char *filename;
     char have_data;
     char is_heap;
