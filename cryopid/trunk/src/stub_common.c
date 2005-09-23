@@ -88,10 +88,6 @@ void usage(char* argv0)
 static void real_main(int argc, char** argv) __attribute__((noreturn));
 static void real_main(int argc, char** argv)
 {
-    asm("movq %0, %%rax" : : "i"(__NR_arch_prctl));
-    asm("mov %0, %%rdi" : : "i"(0x1003));
-    asm("movq %0, %%rsi" : : "i"(0));
-    asm("syscall");
     image_fd = 42;
     /* See if we're being executed for the second time. If so, read arguments
      * from the file.
