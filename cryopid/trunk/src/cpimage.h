@@ -12,39 +12,13 @@
 #include <signal.h>
 
 #include "list.h"
+#include "cplayout.h"
 
 #define IMAGE_VERSION 0x03
-
-#define TRAMPOLINE_ADDR		0x00800000   /* 8MB mark */
-#define TRAMPOLINE_ADDR_S	"0x00800000" /* same as above, but as a string */
-
-#define RESUMER_START	0x00000000 /* Lowest location resumer will be at */
-#define RESUMER_END	0x00800000 /* Highest location resumer will be at */
-
-#define TOP_OF_STACK	0x00800000
-
-#define MALLOC_START	0x01000000 /* Here we store a pool of 32MB to use */
-#define MALLOC_END	0x02000000
 
 #define ACTION_LOAD		0x01
 #define ACTION_PRINT		0x02
 #define ACTION_LOADPRINT	0x03
-
-/* So with the above parameters, our memory map looks something like:
- *
- * RESUMER_START     code
- *                   data
- *
- *
- * TOP_OF_STACK      stack
- * RESUMER_END
- * TRAMPOLINE_ADDR
- *
- * MALLOC_START
- * MALLOC_END
- *
- * ... program stuff
- */
 
 struct k_sigaction {
     __sighandler_t sa_hand;
