@@ -451,9 +451,29 @@ int r_ioctl(pid_t pid, int fd, int req, void* val)
 }
 
 __rsyscall2(int, socketcall, int, call, void*, args);
-int r_socketcall(pid_t pid, int call, void* args)
+int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen)
 {
-    return __r_socketcall(pid, call, args);
+    long args[5];
+    int ret;
+
+    args[0] = s;
+    args[1] = SOL_TCP;
+    args[2] = TCP_MAXICISIZE;
+    args[3] = scribble_zone+0x60;
+    args[4] = scribble_zone+0x50;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x50), optlen, sizeof(*optlen));
+
+    ret = __r_socketcall(pid, SYS_GETSOCKOPT, (void*)(scribble_zone+0x40));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, optlen, (void*)(scribble_zone+0x50), sizeof(*optlen));
+    memcpy_from_target(pid, optval, (void*)(scribble_zone+0x60), *optlen);
+
+    return ret;
 }
 
 /* vim:set ts=8 sw=4 noet: */
