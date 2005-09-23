@@ -47,6 +47,6 @@ stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 
 freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
 	@echo Linking $@
-	$(CC) -Os -o $@ $^ -lz
+	$(CC) $(CFLAGS) -Os -o $@ $^ -lz
 
 .PHONY: arch
