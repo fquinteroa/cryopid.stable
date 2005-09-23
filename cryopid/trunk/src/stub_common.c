@@ -27,20 +27,6 @@ char** real_argv;
 char** real_environ;
 extern char** environ;
 
-static void safe_read(int fd, void* dest, size_t count, char* desc)
-{
-    int ret;
-    ret = read(fd, dest, count);
-    if (ret == -1) {
-	fprintf(stderr, "Read error on %s: %s\n", desc, strerror(errno));
-	exit(1);
-    }
-    if (ret < count) {
-	fprintf(stderr, "Short read on %s\n", desc);
-	exit(1);
-    }
-}
-
 static void read_process()
 {
     void *fptr;

@@ -1,9 +1,10 @@
 #include <errno.h>
+#include <malloc.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
+#include <unistd.h>
 #include <sys/mman.h>
 
 #include "cryopid.h"
@@ -24,6 +25,20 @@ int syscall_check(int retval, int can_be_fake, char* desc, ...)
 	exit(1);
     }
     return retval;
+}
+
+void safe_read(int fd, void* dest, size_t count, char* desc)
+{
+    int ret;
+    ret = read(fd, dest, count);
+    if (ret == -1) {
+	fprintf(stderr, "Read error on %s: %s\n", desc, strerror(errno));
+	exit(1);
+    }
+    if (ret < count) {
+	fprintf(stderr, "Short read on %s\n", desc);
+	exit(1);
+    }
 }
 
 #ifdef COMPILING_STUB
