@@ -8,6 +8,7 @@
 #include <asm/ptrace.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "cpimage.h"
 #include "cryopid.h"
