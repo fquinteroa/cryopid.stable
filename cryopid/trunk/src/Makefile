@@ -34,6 +34,7 @@ arch:
 
 clean:
 	rm -f *.o arch/*.o $(TARGETS) 
+	rm -f arch
 
 stub-image-%.o: stub-%
 	@echo Generating binary object of $^
