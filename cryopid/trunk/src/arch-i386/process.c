@@ -8,28 +8,18 @@
 /* large file support */
 //#define _FILE_OFFSET_BITS 64
 
-#include <malloc.h>
+#include <inttypes.h>
 #include <errno.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/ptrace.h>
 #include <sys/mman.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <linux/user.h>
-#include <linux/kdev_t.h>
-#include <asm/ldt.h>
-#include <asm/unistd.h>
-#include <asm/ptrace.h>
+#include <sys/ptrace.h>
 #include <assert.h>
-#include <asm/termios.h>
+#include <netinet/tcp.h>
+#include <linux/net.h>
+
+#include "linux/tcpcp.h"
 
 #include "cryopid.h"
 #include "cpimage.h"
