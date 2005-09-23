@@ -25,63 +25,23 @@
 #include "cpimage.h"
 #include "process.h"
 #include "tcpcp.h"
-extern int r_socketcall(pid_t pid, int call, void* args);
+extern int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen);
 
 /* ----- Interface to low-level API ---------------------------------------- */
 
 
 static int tcp_max_ici_size(pid_t pid, int s,int *size)
 {
-    int ret;
-    int size_size = sizeof(*size);
-    long args[5];
-
+    socklen_t size_size = sizeof(*size);
     /* return getsockopt(s,SOL_TCP,TCP_MAXICISIZE,size,&size_size); */
-
-    args[0] = s;
-    args[1] = SOL_TCP;
-    args[2] = TCP_MAXICISIZE;
-    args[3] = scribble_zone+0x60;
-    args[4] = scribble_zone+0x70;
-
-    memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
-    memcpy_into_target(pid, (void*)(scribble_zone+0x70), &size_size, sizeof(size_size));
-
-    ret = r_socketcall(pid, SYS_GETSOCKOPT, (void*)(scribble_zone+0x40));
-
-    if (ret == -1)
-	return -1;
-
-    memcpy_from_target(pid, size, (void*)(scribble_zone+0x60), size_size);
-
-    return 0;
+    return r_getsockopt(pid, s, SOL_TCP, TCP_MAXICISIZE, size, &size_size);
 }
 
 
 static int tcp_get_ici(pid_t pid, int s, void *ici, int size)
 {
-    int ret;
-    long args[5];
-
     /* return getsockopt(s,SOL_TCP,TCP_ICI,ici,&size); */
-
-    args[0] = s;
-    args[1] = SOL_TCP;
-    args[2] = TCP_ICI;
-    args[3] = scribble_zone+0x70;
-    args[4] = scribble_zone+0x60;
-
-    memcpy_into_target(pid, (void*)(scribble_zone+0x40), args, sizeof(args));
-    memcpy_into_target(pid, (void*)(scribble_zone+0x60), &size, sizeof(size));
-
-    ret = r_socketcall(pid, SYS_GETSOCKOPT, (void*)(scribble_zone+0x40));
-
-    if (ret)
-	return -1;
-
-    memcpy_from_target(pid, ici, (void*)(scribble_zone+0x70), size);
-
-    return 0;
+    return r_getsockopt(pid, s, SOL_TCP, TCP_ICI, ici, (socklen_t*)&size);
 }
 
 

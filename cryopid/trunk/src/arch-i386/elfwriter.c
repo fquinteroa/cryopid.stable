@@ -8,7 +8,7 @@
 #include "process.h"
 
 extern char *stub_start;
-extern int stub_size;
+extern long stub_size;
 
 static void write_tramp_snippet(char** tramp, long mmap_addr, long mmap_len,
 	int mmap_prot, long src, long dst, long length)

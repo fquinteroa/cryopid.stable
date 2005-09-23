@@ -267,7 +267,6 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     /* The order below is very important. Do not change without good reason and
      * careful thought.
      */
-    fetch_chunks_tls(pid, flags, process_image);
 
     /* this gives us a scribble zone: */
     fetch_chunks_vma(pid, flags, process_image, bin_offset);
@@ -281,7 +280,6 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     fetch_chunks_fd(pid, flags, process_image);
 
     fetch_chunks_sighand(pid, flags, process_image);
-    fetch_chunks_i387_data(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
 
     success = 1;
@@ -297,11 +295,11 @@ out_ptrace:
 
 static inline unsigned long __remote_syscall(pid_t pid,
 	int syscall_no, char *syscall_name,
-	int use_rbx, unsigned long rbx,
-	int use_rcx, unsigned long rcx,
-	int use_rdx, unsigned long rdx,
+	int use_rdi, unsigned long rdi,
 	int use_rsi, unsigned long rsi,
-	int use_rdi, unsigned long rdi)
+	int use_rdx, unsigned long rdx,
+	int use_r10, unsigned long r10,
+	int use_r8 , unsigned long r8 )
 {
     struct user_regs_struct orig_regs, regs;
     unsigned long loc, old_insn, ret;
@@ -320,17 +318,17 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	abort();
     }
 
-    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
+    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x050f) < 0) {
 	perror("ptrace poketext");
 	abort();
     }
 
     regs.rax = syscall_no;
-    if (use_rbx) regs.rbx = rbx;
-    if (use_rcx) regs.rcx = rcx;
-    if (use_rdx) regs.rdx = rdx;
-    if (use_rsi) regs.rsi = rsi;
     if (use_rdi) regs.rdi = rdi;
+    if (use_rsi) regs.rsi = rsi;
+    if (use_rdx) regs.rdx = rdx;
+    if (use_r10) regs.r10 = r10;
+    if (use_r8 ) regs.r8  = r8 ;
 
     /* Set up registers for ptrace syscall */
     regs.rip = loc;
@@ -417,23 +415,42 @@ static inline unsigned long __remote_syscall(pid_t pid,
 		1, (unsigned long)arg2, \
 		1, (unsigned long)arg3, \
 		1, (unsigned long)arg4, \
-		1, (unsigned long)arg5) \
+		1, (unsigned long)arg5); \
     }
 
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
-__rsyscall2(off_t, fcntl, int, fd, int, cmd);
-__rsyscall3(int, mprotect, void*, start, size_t, len, int, flags);
-__rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
-__rsyscall3(int, ioctl, int, fd, int, req, void*, val);
+off_t r_lseek(pid_t pid, int fd, off_t offset, int whence)
+{
+    return __r_lseek(pid, fd, offset, whence);
+}
 
+__rsyscall2(off_t, fcntl, int, fd, int, cmd);
 int r_fcntl(pid_t pid, int fd, int cmd)
 {
     return __r_fcntl(pid, fd, cmd);
 }
 
-int r_lseek(pid_t pid, int fd, off_t offset, int whence)
+__rsyscall3(int, mprotect, void*, start, size_t, len, int, flags);
+int r_mprotect(pid_t pid, void* start, size_t len, int flags)
 {
-    return __r_lseek(pid, fd, offset, whence);
+    return __r_mprotect(pid, start, len, flags);
 }
 
+__rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
+int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa, struct k_sigaction *oksa, size_t masksz)
+{
+    return __r_rt_sigaction(pid, sig, ksa, oksa, masksz);
+}
+
+__rsyscall3(int, ioctl, int, fd, int, req, void*, val);
+int r_ioctl(pid_t pid, int fd, int req, void* val)
+{
+    return __r_ioctl(pid, fd, req, val);
+}
+
+__rsyscall5(int, getsockopt, int, s, int, level, int, optname, void*, optval, socklen_t*, optlen);
+int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen)
+{
+    return __r_getsockopt(pid, s, level, optname, optval, optlen);
+}
 /* vim:set ts=8 sw=4 noet: */

@@ -8,7 +8,7 @@
 #include "process.h"
 
 extern char *stub_start;
-extern int stub_size;
+extern long stub_size;
 
 static void write_tramp_snippet(char** tramp, long mmap_addr, long mmap_len,
 	int mmap_prot, long src, long dst, long length)
@@ -17,20 +17,27 @@ static void write_tramp_snippet(char** tramp, long mmap_addr, long mmap_len,
 
     /* mmap(new_start, length, PROT_READ|PROT_WRITE,
      *         MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0); */
-    *p++=0xb8;*(long*)(p)=__NR_mmap; p+=4;       /* mov foo, %eax */
-    *p++=0xbb;*(long*)(p)=mmap_addr; p+=4;       /* mov foo, %ebx */
-    *p++=0xb9;*(long*)(p)=mmap_len; p+=4;        /* mov foo, %ecx */
-    *p++=0xba;*(long*)(p)=mmap_prot; p+=4;
-						 /* mov foo, %edx */
-    *p++=0xbe;*(long*)(p)=MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS; p+=4;
-						 /* mov foo, %esi */
-    *p++=0xcd;*p++=0x80;			 /* int $0x80 */
+    *p++=0x48; *p++=0xc7; *p++=0xc0;             /* mov foo, %rax */
+    *(int*)(p) = __NR_mmap; p+=4;
+    *p++=0x48; *p++=0xbf;                        /* mov foo, %rdi */
+    *(long*)(p) = mmap_addr; p+=8;
+    *p++=0x48; *p++=0xbe;                        /* mov foo, %rsi */
+    *(long*)(p) = mmap_len; p+=8;
+    *p++=0x48; *p++=0xba;                        /* mov foo, %rdx */
+    *(long*)(p) = mmap_prot; p+=8;
+    *p++=0x49; *p++=0xba;                        /* mov foo, %r10 */
+    *(long*)(p) = MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS; p+=8;
+    *p++=0x0f;*p++=0x05;                         /* syscall */
 
     /* now memcpy code */
-    *p++=0xbe;*(long*)(p)=src; p+=4;             /* mov foo, %esi */
-    *p++=0xbf;*(long*)(p)=dst; p+=4;             /* mov foo, %edi */
-    *p++=0xb9;*(long*)(p)=length>>2; p+=4;       /* mov foo, %ecx */
-    *p++=0xf3;*p++=0xa5;                         /* rep movsl */
+    *p++=0x48; *p++=0xbe;                        /* mov foo, %rsi */
+    *(long*)(p) = src; p+=8;
+    *p++=0x48; *p++=0xbf;                        /* mov foo, %rdi */
+    *(long*)(p) = dst; p+=8;
+    *p++=0x48; *p++=0xb9;                        /* mov foo, %rcx */
+    *(long*)(p) = length>>3; p+=8;
+
+    *p++=0xf3;*p++=0x48;*p++=0xa5;               /* rep movsl */
 
     *tramp = p;
 }
@@ -39,8 +46,9 @@ static void write_tramp_jump(char **tramp, long entry)
 {
     char *p = *tramp;
     /* and go there! */
-    *p++=0xb8;*(long*)(p)=entry; p+=4;           /* mov foo, %eax */
-    *p++=0xff;*p++=0xe0;                         /* jmp (%eax) */
+    *p++=0x48; *p++=0xc7; *p++=0xc0;             /* mov foo, %rax */
+    *(int*)(p) = entry; p+=4;
+    *p++=0xff;*p++=0xe0;                         /* jmp %rax */
     *tramp = p;
 }
 

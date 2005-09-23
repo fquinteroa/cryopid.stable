@@ -1,15 +1,15 @@
 /* Default linker script, for normal executables */
-OUTPUT_FORMAT("elf32-i386", "elf32-i386",
-	      "elf32-i386")
-OUTPUT_ARCH(i386)
+OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
+	      "elf64-x86-64")
+OUTPUT_ARCH(i386:x86-64)
 ENTRY(_start)
-SEARCH_DIR("/usr/i486-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
+SEARCH_DIR("/usr/x86_64-linux-gnu/lib64"); SEARCH_DIR("/usr/local/lib64"); SEARCH_DIR("/lib64"); SEARCH_DIR("/usr/lib64"); SEARCH_DIR("/usr/x86_64-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
 /* Do we need any of these for elf?
    __DYNAMIC = 0;    */
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = 0x00001000); . = 0x00001000 + 0x180;
+  PROVIDE (__executable_start = 0x001000); . = 0x001000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) }
   .hash           : { *(.hash) }
   .dynsym         : { *(.dynsym) }
@@ -70,7 +70,7 @@ SECTIONS
   .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
-  . = ALIGN (0x1000) - ((0x1000 - .) & (0x1000 - 1)); . = DATA_SEGMENT_ALIGN (0x1000, 0x1000);
+  . = ALIGN (0x100000) - ((0x100000 - .) & (0x100000 - 1)); . = DATA_SEGMENT_ALIGN (0x100000, 0x1000);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
@@ -81,7 +81,7 @@ SECTIONS
      could instead move the label definition inside the section, but
      the linker would then create the section even if it turns out to
      be empty, which isn't pretty.  */
-  . = ALIGN(32 / 8);
+  . = ALIGN(64 / 8);
   PROVIDE (__preinit_array_start = .);
   .preinit_array     : { KEEP (*(.preinit_array)) }
   PROVIDE (__preinit_array_end = .);
@@ -122,7 +122,7 @@ SECTIONS
   .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
   .dynamic        : { *(.dynamic) }
   .got            : { *(.got) }
-  . = DATA_SEGMENT_RELRO_END (12, .);
+  . = DATA_SEGMENT_RELRO_END (24, .);
   .got.plt        : { *(.got.plt) }
   .data           :
   {
@@ -142,9 +142,9 @@ SECTIONS
    /* Align here to ensure that the .bss section occupies space up to
       _end.  Align after .bss to ensure correct alignment even if the
       .bss section disappears because there are no input sections.  */
-   . = ALIGN(32 / 8);
+   . = ALIGN(64 / 8);
   }
-  . = ALIGN(32 / 8);
+  . = ALIGN(64 / 8);
   _end = .;
   PROVIDE (end = .);
   . = DATA_SEGMENT_END (.);

@@ -28,9 +28,13 @@ void read_chunk_sighand(void *fptr, int action)
     }
 
     if (action & ACTION_LOAD) {
+#ifdef __i386__
 	if (emulate_tls && sig_num == SIGSEGV) {
 	    install_tls_segv_handler();
-	} else {
+	}
+	else
+#endif
+	{
 	    syscall_check(set_rt_sigaction(sig_num, &ksa, NULL), 0,
 		    "set_rt_action(%d, ksa, NULL)", sig_num);
 	}

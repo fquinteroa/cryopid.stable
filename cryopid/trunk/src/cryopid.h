@@ -58,7 +58,7 @@ extern struct stream_ops lzo_ops;
     extern int _binary_stub_##s##_size; \
     struct stream_ops *stream_ops = &x; \
     char *stub_start = (char*)&_binary_stub_##s##_start; \
-    int stub_size = (int)&_binary_stub_##s##_size
+    long stub_size = (long)&_binary_stub_##s##_size
 
 #endif
 

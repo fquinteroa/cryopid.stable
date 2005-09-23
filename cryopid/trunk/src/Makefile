@@ -1,6 +1,12 @@
 ARCH=$(shell arch)
+
 ifneq ($(filter i%86,$(ARCH)), )
 ARCH=i386
+ARCH_OFORMAT=elf32-i386
+endif
+
+ifeq ($(ARCH), x86_64)
+ARCH_OFORMAT=elf64-x86-64
 endif
 
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o tcpcp_r.o arch/arch_r_objs.o
@@ -11,7 +17,7 @@ STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
-CFLAGS = -g -Wall -Os -fpic -I. -Iarch
+CFLAGS = -g -Wall -Os -fpic -I. -Iarch -D__$(ARCH)__
 
 CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
@@ -31,7 +37,7 @@ clean:
 
 stub-image-%.o: stub-%
 	@echo Generating binary object of $^
-	@$(LD) -m elf_i386 --format binary --oformat elf32-i386 -r $< -o $@
+	@$(LD) -m elf_$(ARCH) --format binary --oformat $(ARCH_OFORMAT) -r $< -o $@
 
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@

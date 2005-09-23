@@ -421,7 +421,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
 
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
-int r_lseek(pid_t pid, int fd, off_t offset, int whence)
+off_t r_lseek(pid_t pid, int fd, off_t offset, int whence)
 {
     return __r_lseek(pid, fd, offset, whence);
 }

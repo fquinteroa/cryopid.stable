@@ -54,12 +54,6 @@ void write_chunk(void *fptr, struct cp_chunk *chunk)
 	case CP_CHUNK_REGS:
 	    write_chunk_regs(fptr, &chunk->regs);
 	    break;
-	case CP_CHUNK_I387_DATA:
-	    write_chunk_i387_data(fptr, &chunk->i387_data);
-	    break;
-	case CP_CHUNK_TLS:
-	    write_chunk_tls(fptr, &chunk->tls);
-	    break;
 	case CP_CHUNK_FD:
 	    write_chunk_fd(fptr, &chunk->fd);
 	    break;
@@ -69,6 +63,14 @@ void write_chunk(void *fptr, struct cp_chunk *chunk)
 	case CP_CHUNK_SIGHAND:
 	    write_chunk_sighand(fptr, &chunk->sighand);
 	    break;
+#ifdef __i386__
+	case CP_CHUNK_I387_DATA:
+	    write_chunk_i387_data(fptr, &chunk->i387_data);
+	    break;
+	case CP_CHUNK_TLS:
+	    write_chunk_tls(fptr, &chunk->tls);
+	    break;
+#endif
 	default:
 	    bail("Unknown chunk type to write (0x%x)", chunk->type)
     }

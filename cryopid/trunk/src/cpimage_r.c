@@ -83,12 +83,6 @@ int read_chunk(void *fptr, int action)
 	case CP_CHUNK_REGS:
 	    read_chunk_regs(fptr, action);
 	    break;
-	case CP_CHUNK_I387_DATA:
-	    read_chunk_i387_data(fptr, action);
-	    break;
-	case CP_CHUNK_TLS:
-	    read_chunk_tls(fptr, action);
-	    break;
 	case CP_CHUNK_FD:
 	    read_chunk_fd(fptr, action);
 	    break;
@@ -98,6 +92,14 @@ int read_chunk(void *fptr, int action)
 	case CP_CHUNK_SIGHAND:
 	    read_chunk_sighand(fptr, action);
 	    break;
+#ifdef __i386__
+	case CP_CHUNK_I387_DATA:
+	    read_chunk_i387_data(fptr, action);
+	    break;
+	case CP_CHUNK_TLS:
+	    read_chunk_tls(fptr, action);
+	    break;
+#endif
 	case CP_CHUNK_FINAL:
 	    return 0;
 	default:
