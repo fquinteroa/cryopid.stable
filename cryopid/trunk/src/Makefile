@@ -11,7 +11,7 @@ STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze $(STUBS)
 
-CFLAGS = -g -Wall -Os -fpic
+CFLAGS = -g -Wall -Os -fpic -I. -Iarch
 
 CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
@@ -24,7 +24,7 @@ all: arch $(TARGETS)
 
 arch:
 	rm -f arch
-	ln -s arch-$(ARCH)
+	ln -s arch-$(ARCH) arch
 
 clean:
 	rm -f *.o arch/*.o $(TARGETS) 
