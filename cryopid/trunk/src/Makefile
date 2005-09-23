@@ -35,6 +35,6 @@ stub-%: stub_$(ARCH).o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@strip $@
 	@$(DEPAX) $@
 
-freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process_$(ARCH).o elfwriter_$(ARCH).o elfwriter_common.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
+freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o process_$(ARCH).o elfwriter_$(ARCH).o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
 	@echo Linking $@
 	$(CC) -Os -o $@ $^ -lz
