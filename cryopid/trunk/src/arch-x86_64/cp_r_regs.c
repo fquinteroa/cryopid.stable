@@ -1,6 +1,7 @@
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
+#include <asm/prctl.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 
@@ -19,17 +20,17 @@ static void load_chunk_regs(struct user *user, int stopped)
 
     cp = code;
 
+    /* put return dest onto stack too */
+    r->rsp-=8;
+    *(long*)r->rsp = r->rip;
+
     /* put eflags onto the process' stack so we can pop it off */
     r->rsp-=8;
     *(long*)r->rsp = r->eflags;
 
-    /* put return dest onto stack too*/
-    r->rsp-=8;
-    *(long*)r->rsp = r->rip;
-
     code[0xffc] = 'A';
     /* set up a temporary stack for use */
-    *cp++=0x48; *cp++=0x8b; *cp++=24;
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc4;
     *(int*)(cp) = (int)code+0x0ff0; cp+=4; /* mov 0x11000, %rsp */
 
     /* munmap our custom malloc space */
@@ -49,6 +50,17 @@ static void load_chunk_regs(struct user *user, int stopped)
     *cp++=0x48; *cp++=0xbe;
     *(long*)(cp) = RESUMER_END-RESUMER_START; cp+=8; /* mov foo, %rsi  */
     *cp++=0x0f;*cp++=0x05; /* syscall */
+
+    /* set fs_base */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
+    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
+    *cp++=0x48; *cp++=0xbf;
+    *(long*)(cp) = ARCH_SET_FS; cp+=8; /* mov foo, %rdi  */
+    *cp++=0x48; *cp++=0xbe;
+    *(long*)(cp) = r->fs_base; cp+=8; /* mov foo, %rsi  */
+    *cp++=0x0f;*cp++=0x05; /* syscall */
+
+    /* FIXME: ditto gs_base */
 
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {

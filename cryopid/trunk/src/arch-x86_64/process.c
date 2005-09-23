@@ -194,7 +194,11 @@ int is_in_syscall(pid_t pid, struct user *user)
 	perror("ptrace(PEEKDATA)");
 	return 0;
     }
-    return (inst&0xffff) == 0x80cd;
+    if ((inst&0xffff) == 0x80cd)
+	return 1;
+    if ((inst&0xffff) == 0x050f)
+	return 1;
+    return 0;
 }
 
 void set_syscall_return(struct user* user, unsigned long val) {

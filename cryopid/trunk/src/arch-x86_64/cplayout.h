@@ -1,13 +1,12 @@
 #ifndef _CPLAYOUT_H_
 #define _CPLAYOUT_H_
 
-#define TRAMPOLINE_ADDR		0x00800000   /* 8MB mark */
-#define TRAMPOLINE_ADDR_S	"0x00800000" /* same as above, but as a string */
+#define TRAMPOLINE_ADDR		0x00300000   /* 3MB mark */
 
 #define RESUMER_START	0x00000000 /* Lowest location resumer will be at */
-#define RESUMER_END	0x00800000 /* Highest location resumer will be at */
+#define RESUMER_END	0x00300000 /* Highest location resumer will be at */
 
-#define TOP_OF_STACK	0x00800000
+#define TOP_OF_STACK	0x00310000
 
 #define MALLOC_START	0x01000000 /* Here we store a pool of 32MB to use */
 #define MALLOC_END	0x02000000
