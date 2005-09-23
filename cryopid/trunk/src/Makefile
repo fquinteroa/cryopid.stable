@@ -23,8 +23,11 @@ CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
-#LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
+ifeq ($(ARCH),i386)
+LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
+else
 LIBC = -lc
+endif
 
 all: arch $(TARGETS)
 
