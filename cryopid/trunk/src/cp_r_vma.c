@@ -31,7 +31,7 @@ void read_chunk_vma(void *fptr, int action)
     read_bit(fptr, &vma.is_heap, sizeof(vma.is_heap));
 
     if (action & ACTION_PRINT) {
-	fprintf(stderr, "VMA %08lx-%08lx (size:%8ld) %c%c%c%c %08lx %02x:%02x %ld\t%s",
+	fprintf(stderr, "VMA %08lx-%08lx (size:%8ld) %c%c%c%c %08lx %02x:%02x %d\t%s",
 		vma.start, vma.start+vma.length, vma.length,
 		(vma.prot&PROT_READ)?'r':'-',
 		(vma.prot&PROT_WRITE)?'w':'-',

@@ -31,7 +31,7 @@ static void load_chunk_regs(struct user *user, int stopped)
     code[0xffc] = 'A';
     /* set up a temporary stack for use */
     *cp++=0x48; *cp++=0xc7; *cp++=0xc4;
-    *(int*)(cp) = (int)code+0x0ff0; cp+=4; /* mov 0x11000, %rsp */
+    *(int*)(cp) = ((long)code&0xffffffff)+0x0ff0; cp+=4; /* mov 0x11000, %rsp */
 
     /* munmap our custom malloc space */
     *cp++=0x48; *cp++=0xc7; *cp++=0xc0;

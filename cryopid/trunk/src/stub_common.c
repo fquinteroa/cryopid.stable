@@ -173,6 +173,8 @@ int main(int argc, char**argv)
     int i;
 
 #ifdef __x86_64__
+    /* FIXME: this doesn't belong here. */
+    extern void set_fs();
     set_fs();
 #endif
 

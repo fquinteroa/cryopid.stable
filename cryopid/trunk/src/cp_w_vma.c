@@ -165,7 +165,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     }
 
     /* we have all the info we need, regurgitate it for confirmation */
-    fprintf(stderr, "Map: %08lx-%08lx %c%c%c%c %08lx %02x:%02x %-10ld %s\n",
+    fprintf(stderr, "Map: %08lx-%08lx %c%c%c%c %08lx %02x:%02x %-10d %s\n",
 	    vma->start, vma->start + vma->length,
 	    (vma->prot & PROT_READ)?'r':'-',
 	    (vma->prot & PROT_WRITE)?'w':'-',
