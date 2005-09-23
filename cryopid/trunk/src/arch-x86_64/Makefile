@@ -1,6 +1,6 @@
 R_CHUNK_OBJS = cp_r_regs.o
 W_CHUNK_OBJS = cp_w_regs.o
-CFLAGS = -g -Wall -Os -fpic -I..
+CFLAGS = -g -Wall -Os -fpic -I. -I..
 
 all: arch_r_objs.o arch_w_objs.o
 
