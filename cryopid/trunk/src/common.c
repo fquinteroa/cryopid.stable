@@ -9,7 +9,7 @@
 
 #include "cryopid.h"
 
-int syscall_check(int retval, int can_be_fake, char* desc, ...)
+long syscall_check(int retval, int can_be_fake, char* desc, ...)
 {
     va_list va_args;
     /* can_be_fake is true if the syscall might return -1 anyway, and

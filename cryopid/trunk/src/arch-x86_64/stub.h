@@ -6,7 +6,7 @@
 
 static inline void jump_to_trampoline()
 {
-    asm("jmp *%%eax\n" : : "a"(TRAMPOLINE_ADDR));
+    asm("jmp *%%rax\n" : : "a"(TRAMPOLINE_ADDR));
 }
 
 static inline void* find_top_of_stack()
@@ -31,7 +31,7 @@ static inline void relocate_stack()
     top_of_new_stack = (void*)TOP_OF_STACK;
     size_of_new_stack = PAGE_SIZE;
 
-    syscall_check( (int)
+    syscall_check( (unsigned long)
 	mmap(top_of_new_stack - size_of_new_stack, size_of_new_stack,
 	    PROT_READ|PROT_WRITE|PROT_EXEC,
 	    MAP_ANONYMOUS|MAP_FIXED|MAP_GROWSDOWN|MAP_PRIVATE, -1, 0),
@@ -40,8 +40,8 @@ static inline void relocate_stack()
     memcpy(top_of_new_stack - size_of_new_stack,
 	    top_of_old_stack - size_of_new_stack, /* FIX ME */
 	    size_of_new_stack);
-    __asm__ ("addl %0, %%esp" : : "a"(top_of_new_stack - top_of_old_stack));
-    __asm__ ("addl %0, %%ebp" : : "a"(top_of_new_stack - top_of_old_stack));
+    __asm__ ("addq %0, %%rsp" : : "a"(top_of_new_stack - top_of_old_stack));
+    __asm__ ("addq %0, %%rbp" : : "a"(top_of_new_stack - top_of_old_stack));
 
     /* unmap absolutely everything above us! */
     syscall_check(

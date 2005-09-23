@@ -2,28 +2,28 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <linux/elf.h>
 #include <string.h>
 #include <unistd.h>
+#include <elf.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
 #include "process.h"
 
-static void seek_to_image(int fd)
+void seek_to_image(int fd)
 {
-    Elf32_Ehdr e;
-    Elf32_Shdr s;
+    Elf64_Ehdr e;
+    Elf64_Shdr s;
     int i;
     char* strtab;
 
     syscall_check(lseek(fd, 0, SEEK_SET), 0, "lseek");
-    safe_read(fd, &e, sizeof(e), "Elf32_Ehdr");
+    safe_read(fd, &e, sizeof(e), "Elf64_Ehdr");
     if (e.e_shoff == 0) {
 	fprintf(stderr, "No section header found in self! Bugger.\n");
 	exit(1);
     }
-    if (e.e_shentsize != sizeof(Elf32_Shdr)) {
+    if (e.e_shentsize != sizeof(Elf64_Shdr)) {
 	fprintf(stderr, "Section headers incorrect size. Bugger.\n");
 	exit(1);
     }
@@ -33,7 +33,7 @@ static void seek_to_image(int fd)
     }
     
     /* read the string table */
-    syscall_check(lseek(fd, e.e_shoff+(e.e_shstrndx*sizeof(Elf32_Shdr)), SEEK_SET), 0, "lseek");
+    syscall_check(lseek(fd, e.e_shoff+(e.e_shstrndx*sizeof(Elf64_Shdr)), SEEK_SET), 0, "lseek");
     safe_read(fd, &s, sizeof(s), "string table section header");
     syscall_check(lseek(fd, s.sh_offset, SEEK_SET), 0, "lseek");
     strtab = xmalloc(s.sh_size);
@@ -43,8 +43,8 @@ static void seek_to_image(int fd)
 	long offset;
 
 	syscall_check(
-		lseek(fd, e.e_shoff+(i*sizeof(Elf32_Shdr)), SEEK_SET), 0, "lseek");
-	safe_read(fd, &s, sizeof(s), "Elf32_Shdr");
+		lseek(fd, e.e_shoff+(i*sizeof(Elf64_Shdr)), SEEK_SET), 0, "lseek");
+	safe_read(fd, &s, sizeof(s), "Elf64_Shdr");
 	if (s.sh_type != SHT_PROGBITS || s.sh_name == 0)
 	    continue;
 

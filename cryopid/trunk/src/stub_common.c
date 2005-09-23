@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <linux/elf.h>
 #include <string.h>
 #include <unistd.h>
 
