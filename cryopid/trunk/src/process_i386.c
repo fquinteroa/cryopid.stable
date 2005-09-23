@@ -371,20 +371,20 @@ static inline unsigned long __remote_syscall(pid_t pid,
 }
 
 #define __rsyscall0(type,name) \
-    type r_##name(pid_t pid) { \
+    type __r_##name(pid_t pid) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		0,0,0,0,0,0,0,0,0,0); \
     }
 
 #define __rsyscall1(type,name,type1,arg1) \
-    type r_##name(pid_t pid, type1 arg1) { \
+    type __r_##name(pid_t pid, type1 arg1) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		1, (unsigned long)arg1, \
 		0,0,0,0,0,0,0,0); \
     }
 
 #define __rsyscall2(type,name,type1,arg1,type2,arg2) \
-    type r_##name(pid_t pid, type1 arg1, type2 arg2) { \
+    type __r_##name(pid_t pid, type1 arg1, type2 arg2) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		1, (unsigned long)arg1, \
 		1, (unsigned long)arg2, \
@@ -392,7 +392,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
 
 #define __rsyscall3(type,name,type1,arg1,type2,arg2,type3,arg3) \
-    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3) { \
+    type __r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		1, (unsigned long)arg1, \
 		1, (unsigned long)arg2, \
@@ -401,7 +401,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
 
 #define __rsyscall4(type,name,type1,arg1,type2,arg2,type3,arg3,type4,arg4) \
-    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4) { \
+    type __r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		1, (unsigned long)arg1, \
 		1, (unsigned long)arg2, \
@@ -411,7 +411,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
 
 #define __rsyscall5(type,name,type1,arg1,type2,arg2,type3,arg3,type4,arg4,type5,arg5) \
-    type r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4, type5 arg5) { \
+    type __r_##name(pid_t pid, type1 arg1, type2 arg2, type3 arg3, type4 arg4, type5 arg5) { \
 	return (type)__remote_syscall(pid, __NR_##name, #name, \
 		1, (unsigned long)arg1, \
 		1, (unsigned long)arg2, \
@@ -421,20 +421,39 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
 
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
-__rsyscall2(off_t, fcntl64, int, fd, int, cmd);
-__rsyscall3(int, mprotect, void*, start, size_t, len, int, flags);
-__rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
-__rsyscall3(int, ioctl, int, fd, int, req, void*, val);
-__rsyscall2(int, socketcall, int, call, void*, args);
+int r_lseek(pid_t pid, int fd, off_t offset, int whence)
+{
+    return __r_lseek(pid, fd, offset, whence);
+}
 
+__rsyscall2(off_t, fcntl64, int, fd, int, cmd);
 int r_fcntl(pid_t pid, int fd, int cmd)
 {
     return __r_fcntl64(pid, fd, cmd);
 }
 
-int r_lseek(pid_t pid, int fd, off_t offset, int whence)
+__rsyscall3(int, mprotect, void*, start, size_t, len, int, flags);
+int r_mprotect(pid_t pid, void* start, size_t len, int flags)
 {
-    return __r_lseek(pid, fd, offset, whence);
+    return __r_mprotect(pid, start, len, flags);
+}
+
+__rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
+int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa, struct k_sigaction *oksa, size_t masksz)
+{
+    return __r_rt_sigaction(pid, sig, ksa, oksa, masksz);
+}
+
+__rsyscall3(int, ioctl, int, fd, int, req, void*, val);
+int r_ioctl(pid_t pid, int fd, int req, void* val)
+{
+    return __r_ioctl(pid, fd, req, val);
+}
+
+__rsyscall2(int, socketcall, int, call, void*, args);
+int r_socketcall(pid_t pid, int call, void* args)
+{
+    return __r_socketcall(pid, call, args);
 }
 
 /* vim:set ts=8 sw=4 noet: */

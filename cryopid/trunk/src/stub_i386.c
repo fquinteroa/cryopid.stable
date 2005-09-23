@@ -1,6 +1,7 @@
 //#define _FILE_OFFSET_BITS 64
 
 #include <sys/ptrace.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -9,6 +10,9 @@
 #include <asm/ucontext.h>
 #include <linux/unistd.h>
 #include <linux/elf.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
