@@ -1,3 +1,4 @@
+#include <linux/unistd.h>
 #include <linux/user.h>
 #include <sys/ptrace.h>
 #include <signal.h>
@@ -6,6 +7,9 @@
 
 #include "cryopid.h"
 #include "cpimage.h"
+
+_syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, ksa, 
+	const struct k_sigaction*, oksa, size_t, sigsetsize);
 
 void read_chunk_sighand(void *fptr, int action)
 {
@@ -35,7 +39,7 @@ void read_chunk_sighand(void *fptr, int action)
 	else
 #endif
 	{
-	    syscall_check(set_rt_sigaction(sig_num, &ksa, NULL), 0,
+	    syscall_check(rt_sigaction(sig_num, &ksa, NULL, sizeof(arch_sigset_t)), 0,
 		    "set_rt_action(%d, ksa, NULL)", sig_num);
 	}
     }

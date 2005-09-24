@@ -29,20 +29,6 @@ struct k_sigaction {
     } sa_mask;       /* mask last for extensibility */
 };
 
-static inline int set_rt_sigaction(int sig, const struct k_sigaction* ksa,
-	const struct k_sigaction* oksa)
-{
-    int ret;
-    asm (
-	    "mov %2,%%ebx\n"
-	    "int $0x80"
-	    : "=a"(ret)
-	    : "a"(__NR_rt_sigaction), "r"(sig),
-	      "c"(ksa), "d"(oksa), "S"(sizeof(ksa->sa_mask))
-	);
-    return ret;
-}
-
 #define GET_LIBRARIES_TOO          0x01
 #define GET_OPEN_FILE_CONTENTS     0x02
 

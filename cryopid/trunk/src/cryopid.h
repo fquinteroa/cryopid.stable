@@ -6,6 +6,7 @@
 #include <malloc.h>
 
 #include "cpimage.h"
+#include "arch/arch.h"
 
 #define debug(s, x...) fprintf(stderr, s"\n", ##x)
 

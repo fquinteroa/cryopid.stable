@@ -5,31 +5,16 @@
  * Licensed under a BSD-ish license.
  */
 
-/* large file support */
-//#define _FILE_OFFSET_BITS 64
-
-#include <malloc.h>
+#include <inttypes.h>
 #include <errno.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/ptrace.h>
 #include <sys/mman.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <linux/user.h>
-#include <linux/kdev_t.h>
-#include <asm/ldt.h>
-#include <asm/unistd.h>
-#include <asm/ptrace.h>
+#include <sys/ptrace.h>
 #include <assert.h>
-#include <asm/termios.h>
+#include <netinet/tcp.h>
+#include <linux/net.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
@@ -457,4 +442,8 @@ int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen
 {
     return __r_getsockopt(pid, s, level, optname, optval, optlen);
 }
+
+
+
+
 /* vim:set ts=8 sw=4 noet: */
