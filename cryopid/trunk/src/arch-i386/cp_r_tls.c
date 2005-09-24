@@ -347,7 +347,7 @@ void install_tls_segv_handler()
     sa.sa_hand = (__sighandler_t)tls_segv_handler;
     sa.sa_flags = SA_SIGINFO;
 
-    syscall_check(set_rt_sigaction(SIGSEGV, &sa, &old_sa), 0, "set_rt_sigaction");
+    syscall_check(rt_sigaction(SIGSEGV, &sa, &old_sa, sizeof(arch_sigset_t)), 0, "set_rt_sigaction");
 }
 
 /* vim:set ts=8 sw=4 noet: */

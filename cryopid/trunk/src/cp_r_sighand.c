@@ -8,9 +8,6 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-_syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, ksa, 
-	const struct k_sigaction*, oksa, size_t, sigsetsize);
-
 void read_chunk_sighand(void *fptr, int action)
 {
     int sig_num;
