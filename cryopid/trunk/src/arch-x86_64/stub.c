@@ -33,8 +33,7 @@ void set_fs()
      * our TLS segment first.
      */
     brk = (unsigned long)sbrk(0);
-    tls_seg = (unsigned long)mmap((void*)0x100000, PAGE_SIZE, PROT_READ|PROT_WRITE,
-	    MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+    tls_seg = (unsigned long)xmalloc(PAGE_SIZE);
     arch_prctl(ARCH_GET_FS, (long)&cur_fs);
     brk_start = brk & ~(PAGE_SIZE-1);
     memcpy((void*)tls_seg, (void*)brk_start, brk-brk_start);
