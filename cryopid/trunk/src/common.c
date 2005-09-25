@@ -54,7 +54,7 @@ void safe_read(int fd, void* dest, size_t count, char* desc)
 static void *cp_malloc_hook(size_t size, const void *caller)
 {
     static long next_free_addr = MALLOC_START;
-    int full_len = size + 0x1000 - (size & 0x0fff)?:0x1000;
+    int full_len = (size + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
     if (next_free_addr + full_len > MALLOC_END)
 	return NULL; /* out of memory here */
     void *p = mmap((void*)next_free_addr, full_len, PROT_READ|PROT_WRITE,
