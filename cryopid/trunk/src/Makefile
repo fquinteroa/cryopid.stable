@@ -22,11 +22,7 @@ CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
-ifeq ($(ARCH),i386)
-LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-x86/libc.a /usr/lib/gcc/i486-linux-gnu/4.0.2/libgcc.a
-else
-LIBC = -lc
-endif
+LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/libc.a /usr/lib/gcc/i486-linux-gnu/4.0.2/libgcc.a
 
 all: arch $(TARGETS)
 
