@@ -4,6 +4,8 @@
 /* Used to poison memory that shouldn't be used. */
 #define ARCH_POISON		0xdeadbeef
 
+#define GB		(1024*1024*1024)
+
 #define _ARCH_NSIG       64
 #define _ARCH_NSIG_BPW   32
 #define _ARCH_NSIG_WORDS (_ARCH_NSIG / _ARCH_NSIG_BPW)
