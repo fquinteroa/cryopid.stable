@@ -52,6 +52,7 @@ File descriptors:
 - Unix sockets
 - sound devices (ALSA & OSS)
 - large file support
+- deleted files (scrape out and regenerate)
 
 VMAs:
 + memory segments
