@@ -19,7 +19,7 @@ STUB_TYPES = gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze
 
-CFLAGS = -g -Wall -Os -fpic -I. -Iarch -D__$(ARCH)__
+CFLAGS = -Wall -Os -I. -Iarch -D__$(ARCH)__
 
 CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
