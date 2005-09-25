@@ -85,8 +85,9 @@ void usage(char* argv0)
     exit(1);
 }
 
-static void real_main(int argc, char** argv) __attribute__((noreturn));
-static void real_main(int argc, char** argv)
+void real_main(int argc, char** argv) __attribute__((noreturn));
+void real_main(int argc, char** argv) __attribute__((noinline));
+void real_main(int argc, char** argv)
 {
     image_fd = 42;
     /* See if we're being executed for the second time. If so, read arguments
@@ -197,9 +198,6 @@ int main(int argc, char**argv)
 
     /* Now hope for the best! */
     real_main(real_argc, real_argv);
-
-    /* We should never return */
-    return 42;
 }
 
 /* vim:set ts=8 sw=4 noet: */
