@@ -16,9 +16,9 @@
 #define OUT_LEN	(MAX_COMPRESSED_SIZE(IN_LEN))
 
 #ifdef COMPILING_STUB
-#define GZIP_NO_READER
-#else
 #define GZIP_NO_WRITER
+#else
+#define GZIP_NO_READER
 #endif
 
 struct gzip_data {
