@@ -22,7 +22,7 @@ CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
-LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a /usr/lib/gcc/x86_64-linux-gnu/4.0.2/libgcc.a
+LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a -lgcc
 
 all: arch $(TARGETS)
 
@@ -41,7 +41,7 @@ stub-image-%.o: stub-%
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
 	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tarch/stub-linking.x -Os -o $@ $^ -lz $(LIBC)
-	#@strip $@
+	@strip $@
 	@$(DEPAX) $@
 
 freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
