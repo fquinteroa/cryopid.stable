@@ -8,8 +8,8 @@
 
 #define TOP_OF_STACK	0x00310000
 
-#define MALLOC_START	0x01000000 /* Here we store a pool of 32MB to use */
-#define MALLOC_END	0x02000000
+#define MALLOC_START	0x05b0000000 /* Here we store a pool of 32MB to use */
+#define MALLOC_END	0x05b1000000
 
 /* So with the above parameters, our memory map looks something like:
  *
