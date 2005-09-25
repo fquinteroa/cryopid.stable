@@ -2,9 +2,9 @@
 #define _CPIMAGE_H_
 
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <linux/types.h>
 #include <netinet/in.h>
-#include <linux/un.h>
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
