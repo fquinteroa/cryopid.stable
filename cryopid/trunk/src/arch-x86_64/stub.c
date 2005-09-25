@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <string.h>
+#include <linux/unistd.h>
 #include <unistd.h>
 #include <elf.h>
 #include <sys/mman.h>
@@ -12,6 +13,10 @@
 #include "cryopid.h"
 #include "cpimage.h"
 #include "process.h"
+
+#if !arch_prctl
+_syscall2(int, arch_prctl, int, code, unsigned long, addr);
+#endif
 
 void set_fs()
 {

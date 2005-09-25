@@ -1,18 +1,12 @@
-/* _start stolen from uclibc */
+/* _start stolen from dietlibc */
 .global _start
 _start:
-	pop    %ecx
-	mov    %esp,%ebx
-	mov    %esp,%eax
-	mov    %ecx,%edx
-	lea    0x4(%eax,%edx,4),%eax
-	xor    %ebp,%ebp
-	push   %ebp
-	push   %ebp
-	push   %ebp
-	mov    %esp,%ebp
-	push   %eax
-	push   %ebx
-	push   %ecx
-	call   main
+	pop	%ecx
+	movl	%esp,%esi
+	pushl	%ecx
+	leal	4(%esi,%ecx,r),%eax
+	pushl	%eax
+	push	%esi
+	push	%ecx
+	call	main
 
