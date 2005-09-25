@@ -12,8 +12,7 @@ endif
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o tcpcp_r.o arch/arch_r_objs.o
 W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o tcpcp_w.o arch/arch_w_objs.o
 COMMON_OBJS = common.c list.o arch/asmfuncs.o
-# STUB_TYPES = raw buffered lzo gzip
-STUB_TYPES = gzip
+STUB_TYPES = gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze
 
@@ -24,7 +23,7 @@ DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
 ifeq ($(ARCH),i386)
-LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../uclibc/libc.a ../uclibc/crt0.o ../uclibc/crti.o
+LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-x86/libc.a /usr/lib/gcc/i486-linux-gnu/4.0.2/libgcc.a
 else
 LIBC = -lc
 endif
@@ -45,7 +44,7 @@ stub-image-%.o: stub-%
 
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
-	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tarch/stub-linking.x -Os -o $@ $^ $(LIBC) -lz
+	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tarch/stub-linking.x -Os -o $@ $^ -lz $(LIBC)
 	@strip $@
 	@$(DEPAX) $@
 

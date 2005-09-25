@@ -169,7 +169,7 @@ void real_main(int argc, char** argv)
     exit(1);
 }
 
-int main(int argc, char**argv)
+int main(int argc, char**argv, char **envp)
 {
     int i;
 
@@ -188,10 +188,10 @@ int main(int argc, char**argv)
 	real_argv[i] = strdup(argv[i]);
     real_argv[i] = NULL;
 
-    for(i = 0; environ[i]; i++); /* count environment variables */
+    for(i = 0; envp[i]; i++); /* count environment variables */
     real_environ = xmalloc((sizeof(char*)*i)+1);
-    for(i = 0; environ[i]; i++)
-	*real_environ++ = strdup(environ[i]);
+    for(i = 0; envp[i]; i++)
+	*real_environ++ = strdup(envp[i]);
     *real_environ = NULL;
     environ = real_environ;
 

@@ -1,4 +1,4 @@
-R_CHUNK_OBJS = cp_r_regs.o cp_r_tls.o cp_r_i387.o
+R_CHUNK_OBJS = cp_r_regs.o cp_r_tls.o cp_r_i387.o start.o
 W_CHUNK_OBJS = cp_w_regs.o cp_w_tls.o cp_w_i387.o
 CFLAGS = -g -Wall -Os -fpic -I. -I..
 
