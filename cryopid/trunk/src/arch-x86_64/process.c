@@ -1,10 +1,3 @@
-/*
- * Process state saver
- *   (C) 2004 Bernard Blackham <bernard@blackham.com.au>
- *
- * Licensed under a BSD-ish license.
- */
-
 #include <inttypes.h>
 #include <errno.h>
 #include <unistd.h>

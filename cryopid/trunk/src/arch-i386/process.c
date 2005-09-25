@@ -1,13 +1,3 @@
-/*
- * Process state saver
- *   (C) 2004 Bernard Blackham <bernard@blackham.com.au>
- *
- * Licensed under a BSD-ish license.
- */
-
-/* large file support */
-//#define _FILE_OFFSET_BITS 64
-
 #include <inttypes.h>
 #include <errno.h>
 #include <unistd.h>
