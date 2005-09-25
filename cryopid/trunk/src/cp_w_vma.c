@@ -260,11 +260,14 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    remaining -= rlen;
 	}
 
-	if (0 < remaining && remaining <= sizeof(buf)) {
-	    /* padded out to a page, compute checksum anyway */
-	    memset(buf, 0, sizeof(buf));
-	    c = checksum(buf, remaining, c);
-	    remaining = 0;
+	/* Pad out the rest with NULLs */
+	memset(buf, 0, sizeof(buf));
+	while (remaining > 0) {
+	    int remsz = sizeof(buf);
+	    if (remsz > remaining)
+		remsz = remaining;
+	    c = checksum(buf, remsz, c);
+	    remaining -= remsz;
 	}
 
 	/* So did we have a good checksum after all that? */
