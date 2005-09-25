@@ -24,4 +24,10 @@ static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, 
 
 extern int r_arch_prctl(pid_t pid, int code, unsigned long addr);
 
+static inline unsigned long get_task_size()
+{
+    /* As per linux/include/asm-x86_64/processor.h for the non-IO32 case */
+    return 0x800000000000UL - 4096;
+}
+
 #endif /* _ARCH_H_ */
