@@ -18,6 +18,7 @@
 
 static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inode)
 {
+#ifdef USE_TCPCP
     char line[200], *p;
     int i;
     FILE *f;
@@ -55,10 +56,14 @@ static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inod
     debug("ici is %p", tcp->ici);
 
     return 1;
+#else
+    return 0;
+#endif
 }
 
 static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp)
 {
+#ifdef USE_TCPCP
     int len = 0;
     if (!tcp->ici) {
 	write_bit(fptr, &len, sizeof(int));
@@ -67,6 +72,7 @@ static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp)
     len = tcpcp_size(tcp->ici);
     write_bit(fptr, &len, sizeof(int));
     write_bit(fptr, tcp->ici, len);
+#endif
 }
 
 void fetch_fd_socket(pid_t pid, int flags, int fd, int inode,

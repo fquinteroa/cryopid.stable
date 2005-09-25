@@ -19,12 +19,15 @@
 static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *tcp,
 	int action)
 {
+#ifdef USE_TCPCP
     void *ici;
     int len, s;
+#endif
 
     if (action & ACTION_PRINT)
 	fprintf(stderr, "TCP socket ");
 
+#ifdef USE_TCPCP
     read_bit(fptr, &len, sizeof(int));
     if (!len)
 	return;
@@ -39,6 +42,7 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
 	}
 	syscall_check(tcpcp_activate(fd), 0, "tcpcp_activate");
     }
+#endif
 }
 
 void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)

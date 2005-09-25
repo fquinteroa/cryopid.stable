@@ -1,3 +1,6 @@
+# Disabling tcpcp support saves a few KB in the binary.
+USE_TCPCP=y
+
 ARCH=$(shell arch)
 
 ifneq ($(filter i%86,$(ARCH)), )
@@ -9,9 +12,9 @@ ifeq ($(ARCH), x86_64)
 ARCH_OFORMAT=elf64-x86-64
 endif
 
-R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o tcpcp_r.o arch/arch_r_objs.o
-W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o tcpcp_w.o arch/arch_w_objs.o
-COMMON_OBJS = common.c list.o arch/asmfuncs.o
+R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o arch/arch_r_objs.o
+W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o arch/arch_w_objs.o list.o 
+COMMON_OBJS = common.c arch/asmfuncs.o
 STUB_TYPES = gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze
@@ -23,6 +26,12 @@ DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Switch the commenting on the following lines if we suspect wacky uclibc bugs
 LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a -lgcc
+
+ifeq ($(USE_TCPCP),y)
+R_CHUNK_OBJS += tcpcp_r.o 
+W_CHUNK_OBJS += tcpcp_w.o 
+CFLAGS += -DUSE_TCPCP
+endif
 
 all: arch $(TARGETS)
 
