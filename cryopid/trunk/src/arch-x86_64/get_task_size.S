@@ -10,7 +10,7 @@
 .ALIGN(4096)
 .global get_task_size_code
 get_task_size_code:
-movq	$0x7fc0000000,%rax
+movq	$0x1000,%rax
 movq	%rax,start
 movq	%rax,lower
 movq	$0xfffffffffffff000,upper
