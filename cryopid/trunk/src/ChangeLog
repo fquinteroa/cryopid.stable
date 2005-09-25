@@ -1,6 +1,7 @@
 0.5.2
  * Fix more AMD64 issues.
  * Always build stubs with dietlibc.
+ * Only build needed portion of file I/O.
 
 0.5.1
  * Fix buggy remote syscalls on AMD64.

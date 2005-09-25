@@ -15,6 +15,12 @@
 #endif
 #define OUT_LEN	(MAX_COMPRESSED_SIZE(IN_LEN))
 
+#ifdef COMPILING_STUB
+#define GZIP_NO_READER
+#else
+#define GZIP_NO_WRITER
+#endif
+
 struct gzip_data {
     int fd;
     int mode;
@@ -41,15 +47,24 @@ static void *gzip_writer_init(int fd, int mode)
     zd->c_stream.zfree = (free_func)0;
     zd->c_stream.opaque = (voidpf)0;
 
-    if (zd->mode == O_WRONLY) {
+#ifndef GZIP_NO_WRITER
+    if (zd->mode == O_WRONLY)
+    {
 	if (deflateInit(&zd->c_stream, Z_DEFAULT_COMPRESSION) != Z_OK)
 	    bail("deflateInit() failed!");
-    } else {
+    }
+#endif
+#if !defined(GZIP_NO_READER) && !defined(GZIP_NO_WRITER)
+    else
+#endif
+#ifndef GZIP_NO_READER
+    {
 	zd->c_stream.next_in = NULL;
 	zd->c_stream.avail_in = 0;
 	if (inflateInit(&zd->c_stream) != Z_OK)
 	    bail("inflateInit() failed!");
     }
+#endif
 
     zd->in = xmalloc(IN_LEN);
     zd->out = xmalloc(OUT_LEN);
@@ -66,6 +81,7 @@ static void *gzip_writer_init(int fd, int mode)
     return zd;
 }
 
+#ifndef GZIP_NO_READER
 static void gzip_uncompress_chunk(void *fptr)
 {
     struct gzip_data *zd = fptr;
@@ -93,7 +109,9 @@ static void gzip_uncompress_chunk(void *fptr)
 
     zd->in_used = 0;
 }
+#endif
 
+#ifndef GZIP_NO_READER
 static int gzip_writer_read(void *fptr, void *buf, int len)
 {
     struct gzip_data *zd = fptr;
@@ -127,7 +145,9 @@ static int gzip_writer_read(void *fptr, void *buf, int len)
 
     return len;
 }
+#endif
 
+#ifndef GZIP_NO_WRITER
 static void gzip_compress_chunk(void *fptr, int flush)
 {
     struct gzip_data *zd = fptr;
@@ -158,7 +178,9 @@ static void gzip_compress_chunk(void *fptr, int flush)
     zd->in_len = 0;
     zd->bytesout += zd->out_len;
 }
+#endif
 
+#ifndef GZIP_NO_WRITER
 static int gzip_writer_write(void *fptr, void *buf, int len)
 {
     struct gzip_data *zd = fptr;
@@ -188,19 +210,23 @@ static int gzip_writer_write(void *fptr, void *buf, int len)
 
     return len;
 }
+#endif
 
 static void gzip_writer_finish(void *fptr)
 {
     struct gzip_data *zd = fptr;
 
+#ifndef GZIP_NO_WRITER
     if (zd->mode == O_WRONLY && zd->in_len > 0) {
 	gzip_compress_chunk(fptr, Z_FINISH);
 	deflateEnd(&zd->c_stream);
     }
+#endif
 
     free(zd->out);
     free(zd->in);
 
+#ifndef GZIP_NO_WRITER
     if (zd->mode == O_WRONLY) {
 	fprintf(stderr, "Compressed %d bytes into %d bytes",
 		zd->bytesin, zd->bytesout);
@@ -208,17 +234,21 @@ static void gzip_writer_finish(void *fptr)
 	    fprintf(stderr, " (%d%% compression)", 100 - (100 * zd->bytesout / zd->bytesin));
 	fprintf(stderr, "\n");
     }
+#endif
 
     close(zd->fd);
     free(zd);
 }
 
+#ifndef GZIP_NO_READER
 static long gzip_writer_ftell(void *fptr)
 {
     struct gzip_data *zd = fptr;
     return zd->offset;
 }
+#endif
 
+#ifndef GZIP_NO_READER
 static void gzip_writer_dup2(void *fptr, int newfd)
 {
     struct gzip_data *zd = fptr;
@@ -231,14 +261,21 @@ static void gzip_writer_dup2(void *fptr, int newfd)
     close(zd->fd);
     zd->fd = newfd;
 }
+#endif
 
 struct stream_ops gzip_ops = {
     .init = gzip_writer_init,
+#ifndef GZIP_NO_READER
     .read = gzip_writer_read,
+#endif
+#ifndef GZIP_NO_WRITER
     .write = gzip_writer_write,
+#endif
     .finish = gzip_writer_finish,
+#ifndef GZIP_NO_READER
     .ftell = gzip_writer_ftell,
     .dup2 = gzip_writer_dup2,
+#endif
 };
 
 declare_writer(gzip, gzip_ops, "Compresses output using the gzip compression algorithm");
