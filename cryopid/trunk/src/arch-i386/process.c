@@ -120,62 +120,6 @@ static int restore_registers(pid_t pid, struct user_regs_struct *r)
     return 0;
 }
 
-int do_syscall(pid_t pid, struct user_regs_struct *regs)
-{
-    long loc;
-    struct user_regs_struct orig_regs;
-    long old_insn;
-    int status, ret;
-
-    if (save_registers(pid, &orig_regs) < 0)
-	return -EACCES;
-
-    loc = scribble_zone+0x10;
-
-    old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
-    if (errno) {
-	perror("ptrace peektext");
-	return -EACCES;
-    }
-    //printf("original instruction at 0x%lx was 0x%lx\n", loc, old_insn);
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
-	perror("ptrace poketext");
-	return -EACCES;
-    }
-
-    /* Set up registers for ptrace syscall */
-    regs->eip = loc;
-    if (restore_registers(pid, regs) < 0)
-	return -EACCES;
-
-    /* Execute call */
-    if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
-	perror("ptrace singlestep");
-	return -EACCES;
-    }
-    ret = waitpid(pid, &status, 0);
-    if (ret == -1) {
-	perror("Failed to wait for child");
-	exit(1);
-    }
-
-    /* Get our new registers */
-    if (save_registers(pid, regs) < 0)
-	return -EACCES;
-
-    /* Return everything back to normal */
-    if (restore_registers(pid, &orig_regs) < 0)
-	return -EACCES;
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
-	perror("ptrace poketext");
-	return -EACCES;
-    }
-
-    return 1;
-}
-
 int is_a_syscall(unsigned long inst, int canonical)
 {
     if ((inst&0xffff) == 0x80cd)
@@ -301,26 +245,18 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	int use_edi, unsigned long edi)
 {
     struct user_regs_struct orig_regs, regs;
-    unsigned long loc, old_insn, ret;
+    unsigned long ret;
     int status;
+
+    if (!syscall_loc) {
+	fprintf(stderr, "No syscall locations found! Cannot do remote syscall.\n");
+	abort();
+    }
 
     if (save_registers(pid, &orig_regs) < 0)
 	abort();
 
     memcpy(&regs, &orig_regs, sizeof(regs));
-
-    loc = scribble_zone+0x10;
-
-    old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
-    if (errno) {
-	perror("ptrace peektext");
-	abort();
-    }
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
-	perror("ptrace poketext");
-	abort();
-    }
 
     regs.eax = syscall_no;
     if (use_ebx) regs.ebx = ebx;
@@ -330,7 +266,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (use_edi) regs.edi = edi;
 
     /* Set up registers for ptrace syscall */
-    regs.eip = loc;
+    regs.eip = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
@@ -353,14 +289,8 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
-	perror("ptrace poketext");
-	abort();
-    }
-
     if (regs.eax < 0) {
 	errno = -regs.eax;
-	fprintf(stderr, "[%d] %s: %s\n", pid, syscall_name, strerror(errno));
 	return -1;
     }
 

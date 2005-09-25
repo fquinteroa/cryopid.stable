@@ -283,15 +283,12 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (save_registers(pid, &regs) < 0)
 	abort();
 
-    fprintf(stderr, "%s %ld %ld\n", syscall_name, regs.orig_rax, regs.rax);
-
     /* Return everything back to normal */
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
     if (regs.rax < 0) {
 	errno = -regs.rax;
-	fprintf(stderr, "[%d] %s: %s\n", pid, syscall_name, strerror(errno));
 	return -1;
     }
 
