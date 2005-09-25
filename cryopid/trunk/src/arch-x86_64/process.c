@@ -288,7 +288,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if (regs.rax < 0) {
+    if ((signed long)regs.rax < 0) {
 	errno = -regs.rax;
 	return -1;
     }
