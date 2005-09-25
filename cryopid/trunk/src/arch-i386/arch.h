@@ -33,4 +33,10 @@ static inline int rt_sigaction(int sig, const struct k_sigaction* ksa,
 	return ret;
 }
 
+static inline unsigned long get_task_size()
+{
+    int stack_var;
+    return (unsigned long)((((unsigned long)&stack_var + GB)/GB)*GB);
+}
+
 #endif /* _ARCH_H_ */
