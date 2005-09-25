@@ -15,7 +15,7 @@ COMMON_OBJS = common.c list.o arch/asmfuncs.o
 # STUB_TYPES = raw buffered lzo gzip
 STUB_TYPES = gzip
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
-TARGETS = freeze $(STUBS)
+TARGETS = freeze
 
 CFLAGS = -g -Wall -Os -fpic -I. -Iarch -D__$(ARCH)__
 
