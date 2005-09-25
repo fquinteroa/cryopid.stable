@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <asm/prctl.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
@@ -387,6 +388,22 @@ __rsyscall5(int, getsockopt, int, s, int, level, int, optname, void*, optval, so
 int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen)
 {
     return __r_getsockopt(pid, s, level, optname, optval, optlen);
+}
+
+__rsyscall2(int, arch_prctl, int, code, unsigned long, addr);
+int r_arch_prctl(pid_t pid, int code, unsigned long addr)
+{
+    int ret, get = (code == ARCH_GET_FS || code == ARCH_GET_GS);
+    unsigned long tmp_addr = addr;
+    if (get)
+	tmp_addr = scribble_zone + 0x50;
+
+    ret = __r_arch_prctl(pid, code, tmp_addr);
+
+    if (get && ret == 0)
+	memcpy_from_target(pid, (void*)addr, (void*)tmp_addr, sizeof(addr));
+
+    return ret;
 }
 
 /* vim:set ts=8 sw=4 noet: */

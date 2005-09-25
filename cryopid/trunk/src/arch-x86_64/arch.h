@@ -22,4 +22,6 @@ struct k_sigaction {
 static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, ksa,
 	struct k_sigaction*, oksa, size_t, sigsetsize);
 
+extern int r_arch_prctl(pid_t pid, int code, unsigned long addr);
+
 #endif /* _ARCH_H_ */

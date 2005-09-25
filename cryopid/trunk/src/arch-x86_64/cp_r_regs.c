@@ -60,7 +60,14 @@ static void load_chunk_regs(struct user *user, int stopped)
     *(long*)(cp) = r->fs_base; cp+=8; /* mov foo, %rsi  */
     *cp++=0x0f;*cp++=0x05; /* syscall */
 
-    /* FIXME: ditto gs_base */
+    /* set gs_base */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
+    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
+    *cp++=0x48; *cp++=0xbf;
+    *(long*)(cp) = ARCH_SET_GS; cp+=8; /* mov foo, %rdi  */
+    *cp++=0x48; *cp++=0xbe;
+    *(long*)(cp) = r->gs_base; cp+=8; /* mov foo, %rsi  */
+    *cp++=0x0f;*cp++=0x05; /* syscall */
 
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {

@@ -1,6 +1,7 @@
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
+#include <asm/prctl.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 
@@ -14,11 +15,12 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     struct user *user_data;
     long pos;
     long* user_data_ptr;
+    unsigned long base;
 
     user_data = xmalloc(sizeof(struct user));
     user_data_ptr = (long*)user_data;
 
-    /* We have a memory segment. We should retrieve its data */
+    /* Get the user struct of the process */
     for(pos = 0; pos < sizeof(struct user)/sizeof(long); pos++) {
 	user_data_ptr[pos] =
 	    ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*sizeof(long)), NULL);
@@ -26,6 +28,12 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 	    perror("ptrace(PTRACE_PEEKDATA): ");
 	}
     }
+
+    /* Fill in fs_base and gs_base */
+    if (r_arch_prctl(pid, ARCH_GET_FS, (unsigned long)&base) == 0)
+	user_data->regs.fs_base = base;
+    if (r_arch_prctl(pid, ARCH_GET_GS, (unsigned long)&base) == 0)
+	user_data->regs.gs_base = base;
 
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, user_data)) {
