@@ -179,6 +179,8 @@ int main(int argc, char**argv)
     set_fs();
 #endif
 
+    get_task_size();
+
     /* Take a copy of our argc/argv and environment below we blow them away */
     real_argc = argc;
     real_argv = (char**)xmalloc((sizeof(char*)*argc)+1);

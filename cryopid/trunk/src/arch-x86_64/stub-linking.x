@@ -116,7 +116,6 @@ SECTIONS
   .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
   .dynamic        : { *(.dynamic) }
   .got            : { *(.got) }
-  . = DATA_SEGMENT_RELRO_END (24, .);
   .got.plt        : { *(.got.plt) }
   .data           :
   {

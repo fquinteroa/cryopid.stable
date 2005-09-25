@@ -46,7 +46,7 @@ stub-image-%.o: stub-%
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
 	$(CC) -static $(CFLAGS) -DCOMPILING_STUB -Tarch/stub-linking.x -Os -o $@ $^ $(LIBC) -lz
-	@strip $@
+	#@strip $@
 	@$(DEPAX) $@
 
 freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o $(patsubst %,stub-image-%.o,$(STUB_TYPES)) $(patsubst %,writer_%.c,$(STUB_TYPES))
