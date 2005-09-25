@@ -32,12 +32,13 @@ void write_chunk_vma(void *fptr, struct cp_vma *data)
 }
 
 static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
-	int get_library_data, long *bin_offset)
+	int get_library_data, int vma_no, long *bin_offset)
 {
     char *ptr1, *ptr2;
     int dminor, dmajor;
     int old_vma_prot = -1;
     int keep_vma_data;
+    static long last_vma_end;
 
     memset(vma, 0, sizeof(struct cp_vma));
 
@@ -133,6 +134,12 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     dminor = strtoul(ptr1, NULL, 16);
     
     vma->dev = MKDEV(dmajor, dminor);
+
+    /* Decide if we just missed the heap entirely */
+    if (vma_no == 2 && vma->prot != (PROT_READ | PROT_WRITE)) {
+	if (bin_offset && !*bin_offset)
+	    *bin_offset = last_vma_end;
+    }
 
     ptr1 = ptr2+1;
     if ((ptr2 = strchr(ptr1, ' ')) != NULL) {
@@ -280,6 +287,7 @@ out:
     if (old_vma_prot != -1)
 	r_mprotect(pid, (void*)vma->start, vma->length, old_vma_prot);
 
+    last_vma_end = vma->start + vma->length;
     return 1;
 }
 
@@ -289,6 +297,7 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
     char tmp_fn[30];
     char map_line[128];
     FILE *f;
+    int vma_no = 0;
 
     snprintf(tmp_fn, 30, "/proc/%d/maps", pid);
     f = fopen(tmp_fn, "r");
@@ -302,10 +311,11 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 	 * mprotect). Put these undoable segments into a list to process again
 	 */
 	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
-		    bin_offset)) {
+		    vma_no, bin_offset)) {
 	    debug("     Error parsing map: %s", map_line);
 	    continue;
 	}
+	vma_no++;
 	list_append(l, chunk);
 	chunk = NULL;
     }
