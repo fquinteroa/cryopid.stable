@@ -1,5 +1,14 @@
 CryoPID is licensed under the modified BSD license (without advertising clause).
-The full text of the license follows.
+
+CryoPID ships with and links against the dietlibc library, which is distributed
+under the GNU General Public Licence, version 2. Sources are available from
+http://www.fefe.de/dietlibc/ .
+
+At present, dietlibc is required for reliability on AMD64. If you wish to
+redistribute CryoPID or derivate works including dietlibc, you are bound by the
+terms of the GPL.
+
+The full text of the BSD license follows.
 
 Copyright (c) 2004-2005, Bernard Blackam All rights reserved.
 
