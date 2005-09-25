@@ -35,8 +35,8 @@ void usage(char* argv0)
 "    -c      Save children of this process as well.\n"
 */
 "\n"
-"This program is part of CryoPID. http://cryopid.berlios.de/\n",
-    argv0);
+"This program is part of CryoPID %s. http://cryopid.berlios.de/\n",
+    argv0, CRYOPID_VERSION);
     exit(1);
 }
 

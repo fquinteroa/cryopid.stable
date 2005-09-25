@@ -8,6 +8,8 @@
 #include "cpimage.h"
 #include "arch/arch.h"
 
+#define CRYOPID_VERSION "0.5.1"
+
 #define debug(s, x...) fprintf(stderr, s"\n", ##x)
 
 #define info(x...) fprintf(stderr, x)
@@ -27,8 +29,6 @@
 		    __FILE__, __LINE__); \
 	    abort(); \
 	}
-
-#define GB		(1024*1024*1024)
 
 /* elfwriter.c */
 void write_stub(int fd, long offset);
