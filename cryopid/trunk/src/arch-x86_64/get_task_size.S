@@ -46,7 +46,7 @@ jne	1b
 
 movq	$1, %rax /* write */
 movq	$142, %rdi
-movq	$tmp, %rsi
+movq	$lower, %rsi
 movq	$8, %rdx
 syscall
 movq	$0x3c, %rax /* exit */
