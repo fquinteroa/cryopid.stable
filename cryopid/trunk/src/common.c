@@ -114,10 +114,4 @@ unsigned int checksum(char *ptr, int len, unsigned int start)
     return sum;
 }
 
-unsigned long get_task_size()
-{
-    int stack_var;
-    return (unsigned long)((((unsigned long)&stack_var + GB)/GB)*GB);
-}
-
 /* vim:set ts=8 sw=4 noet: */

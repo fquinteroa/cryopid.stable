@@ -38,7 +38,6 @@ long syscall_check(int retval, int can_be_fake, char* desc, ...);
 void safe_read(int fd, void* dest, size_t count, char* desc);
 void *xmalloc(int len);
 unsigned int checksum(char *ptr, int len, unsigned int start);
-unsigned long get_task_size();
 
 /* writer_raw.c */
 extern struct stream_ops raw_ops;
