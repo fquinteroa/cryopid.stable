@@ -186,7 +186,7 @@ int is_a_syscall(unsigned long inst, int canonical)
 int is_in_syscall(pid_t pid, struct user *user)
 {
     long inst;
-    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.rip-2, 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.eip-2, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
