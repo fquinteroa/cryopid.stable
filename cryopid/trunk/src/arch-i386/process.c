@@ -40,7 +40,7 @@ char* backup_page(pid_t target, void* addr)
 	    return NULL;
 	}
 	page[i] = ret;
-	if (ptrace(PTRACE_POKETEXT, target, (void*)((long)addr+(i*sizeof(long))), 0xdeadbeef) == -1) {
+	if (ptrace(PTRACE_POKETEXT, target, (void*)((long)addr+(i*sizeof(long))), ARCH_POISON) == -1) {
 	    perror("ptrace(PTRACE_POKETEXT)");
 	    free(page);
 	    return NULL;
@@ -176,15 +176,22 @@ int do_syscall(pid_t pid, struct user_regs_struct *regs)
     return 1;
 }
 
+int is_a_syscall(unsigned long inst, int canonical)
+{
+    if ((inst&0xffff) == 0x80cd)
+	return 1;
+    return 0;
+}
+
 int is_in_syscall(pid_t pid, struct user *user)
 {
     long inst;
-    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.eip-2, 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.rip-2, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
     }
-    return (inst&0xffff) == 0x80cd;
+    return is_a_syscall(inst, 0);
 }
 
 void set_syscall_return(struct user* user, unsigned long val) {
@@ -431,7 +438,15 @@ int r_mprotect(pid_t pid, void* start, size_t len, int flags)
 __rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
 int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa, struct k_sigaction *oksa, size_t masksz)
 {
-    return __r_rt_sigaction(pid, sig, ksa, oksa, masksz);
+    int ret;
+    if (ksa)
+	memcpy_into_target(pid, (void*)(scribble_zone+0x100), ksa, sizeof(*ksa));
+    ret = __r_rt_sigaction(pid, sig, ksa?(void*)(scribble_zone+0x100):NULL,
+	    oksa?(void*)(scribble_zone+0x100+sizeof(*ksa)):NULL, masksz);
+    if (oksa)
+	memcpy_from_target(pid, oksa, (void*)(scribble_zone+0x100+sizeof(*ksa)), sizeof(*oksa));
+
+    return ret;
 }
 
 __rsyscall3(int, ioctl, int, fd, int, req, void*, val);

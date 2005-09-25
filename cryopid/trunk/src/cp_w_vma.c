@@ -12,6 +12,7 @@
 #include "cryopid.h"
 
 long scribble_zone = 0; /* somewhere to scribble on in child */
+long syscall_loc = 0;   /* address of a syscall instruction */
 
 void write_chunk_vma(void *fptr, struct cp_vma *data)
 {
@@ -197,6 +198,22 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     memcpy_from_target(pid, vma->data, (void*)vma->start, vma->length);
     vma->checksum = checksum(vma->data, vma->length, 0);
 
+    /* Decide if it contains a syscall function that's of use to us */
+    if (syscall_loc == 0 &&
+	    (vma->flags & MAP_PRIVATE) &&
+	    !(vma->flags & MAP_SHARED) &&
+	    (vma->prot & (PROT_READ|PROT_EXEC))) {
+	char *p, *end;
+	end = ((char*)vma->data) + vma->length - sizeof(long) + 1;
+	for (p = (char*)vma->data; p < end; p++) {
+	    if (is_a_syscall(*(long*)p, 1)) {
+		syscall_loc = vma->start + (p - (char*)vma->data);
+		debug("[+] Found a syscall location at 0x%lx", syscall_loc);
+		break;
+	    }
+	}
+    }
+
     /* Cases where we want to keep the VMA in the image */
     keep_vma_data = (
 	    get_library_data ||
@@ -280,6 +297,10 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 	if (!chunk)
 	    chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_VMA;
+	/* FIXME: we may not be able to do all VMA's in the first pass, as we
+	 * need a syscall_loc in order to do non-readable VMAs (to call
+	 * mprotect). Put these undoable segments into a list to process again
+	 */
 	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
 		    bin_offset)) {
 	    debug("     Error parsing map: %s", map_line);

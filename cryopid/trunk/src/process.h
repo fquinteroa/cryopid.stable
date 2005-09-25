@@ -33,7 +33,8 @@ struct proc_header_t {
 #define GET_OPEN_FILE_CONTENTS     0x02
 
 int do_syscall(pid_t pid, struct user_regs_struct *regs);
-int is_in_syscall(pid_t pid, void* eip);
+int is_a_syscall(unsigned long inst, int canonical);
+int is_in_syscall(pid_t pid, struct user *user);
 void set_syscall_return(struct user* user, unsigned long val);
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
 int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);

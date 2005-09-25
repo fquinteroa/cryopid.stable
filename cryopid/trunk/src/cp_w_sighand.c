@@ -12,15 +12,13 @@ static int get_signal_handler(pid_t pid, int sig, struct k_sigaction *ksa)
 {
     int ret;
 
-    ret = r_rt_sigaction(pid, sig, NULL, (void*)(scribble_zone+0x100), sizeof(ksa->sa_mask));
+    ret = r_rt_sigaction(pid, sig, NULL, ksa, sizeof(arch_sigset_t));
 
     /* Error checking! */
     if (ret == -1)
 	bail("rt_sigaction on target: %s", strerror(errno));
 
-    memcpy_from_target(pid, ksa, (void*)(scribble_zone+0x100), sizeof(struct k_sigaction));
-
-    //printf("sigaction %d was 0x%lx mask 0x%x flags 0x%x restorer 0x%x\n", sig, ksa->sa_hand, ksa->sa_mask.sig[0], ksa->sa_flags, ksa->sa_restorer);
+    //printf("%d: sigaction %d was 0x%lx mask 0x%x flags 0x%x restorer 0x%x\n", ret, sig, ksa->sa_hand, ksa->sa_mask.sig[0], ksa->sa_flags, ksa->sa_restorer);
 
     return 1;
 }

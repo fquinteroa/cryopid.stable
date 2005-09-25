@@ -35,7 +35,7 @@ char* backup_page(pid_t target, void* addr)
 	    return NULL;
 	}
 	page[i] = ret;
-	if (ptrace(PTRACE_POKETEXT, target, (void*)((long)addr+(i*sizeof(long))), 0xdeadbeef) == -1) {
+	if (ptrace(PTRACE_POKETEXT, target, (void*)((long)addr+(i*sizeof(long))), ARCH_POISON) == -1) {
 	    perror("ptrace(PTRACE_POKETEXT)");
 	    free(page);
 	    return NULL;
@@ -64,12 +64,14 @@ int restore_page(pid_t target, void* addr, char* page)
 int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n)
 {
     /* just like memcpy, but copies it into the space of the target pid */
-    /* n must be a multiple of 4, or will otherwise be rounded down to be so */
+    /* n must be a multiple of word size, or will otherwise be rounded down to
+     * be so */
     int i;
     long *d, *s;
     d = (long*) dest;
     s = (long*) src;
-    for (i = 0; i < n / sizeof(long); i++) {
+    n /= sizeof(long);
+    for (i = 0; i < n; i++) {
 	if (ptrace(PTRACE_POKETEXT, pid, d+i, s[i]) == -1) {
 	    perror("ptrace(PTRACE_POKETEXT)");
 	    return 0;
@@ -81,7 +83,8 @@ int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n)
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
 {
     /* just like memcpy, but copies it from the space of the target pid */
-    /* n must be a multiple of 4, or will otherwise be rounded down to be so */
+    /* n must be a multiple of word size, or will otherwise be rounded down to
+     * be so */
     int i;
     long *d, *s;
     d = (long*) dest;
@@ -115,60 +118,13 @@ static int restore_registers(pid_t pid, struct user_regs_struct *r)
     return 0;
 }
 
-int do_syscall(pid_t pid, struct user_regs_struct *regs)
+int is_a_syscall(unsigned long inst, int canonical)
 {
-    long loc;
-    struct user_regs_struct orig_regs;
-    long old_insn;
-    int status, ret;
-
-    if (save_registers(pid, &orig_regs) < 0)
-	return -EACCES;
-
-    loc = scribble_zone+0x10;
-
-    old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
-    if (errno) {
-	perror("ptrace peektext");
-	return -EACCES;
-    }
-    //printf("original instruction at 0x%lx was 0x%lx\n", loc, old_insn);
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x80cd) < 0) {
-	perror("ptrace poketext");
-	return -EACCES;
-    }
-
-    /* Set up registers for ptrace syscall */
-    regs->rip = loc;
-    if (restore_registers(pid, regs) < 0)
-	return -EACCES;
-
-    /* Execute call */
-    if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
-	perror("ptrace singlestep");
-	return -EACCES;
-    }
-    ret = waitpid(pid, &status, 0);
-    if (ret == -1) {
-	perror("Failed to wait for child");
-	exit(1);
-    }
-
-    /* Get our new registers */
-    if (save_registers(pid, regs) < 0)
-	return -EACCES;
-
-    /* Return everything back to normal */
-    if (restore_registers(pid, &orig_regs) < 0)
-	return -EACCES;
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
-	perror("ptrace poketext");
-	return -EACCES;
-    }
-
-    return 1;
+    if (!canonical && (inst&0xffff) == 0x80cd)
+	return 1;
+    if ((inst&0xffff) == 0x050f)
+	return 1;
+    return 0;
 }
 
 int is_in_syscall(pid_t pid, struct user *user)
@@ -179,11 +135,7 @@ int is_in_syscall(pid_t pid, struct user *user)
 	perror("ptrace(PEEKDATA)");
 	return 0;
     }
-    if ((inst&0xffff) == 0x80cd)
-	return 1;
-    if ((inst&0xffff) == 0x050f)
-	return 1;
-    return 0;
+    return is_a_syscall(inst, 0);
 }
 
 void set_syscall_return(struct user* user, unsigned long val) {
@@ -291,26 +243,18 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	int use_r8 , unsigned long r8 )
 {
     struct user_regs_struct orig_regs, regs;
-    unsigned long loc, old_insn, ret;
+    unsigned long ret;
     int status;
+
+    if (!syscall_loc) {
+	fprintf(stderr, "No syscall locations found! Cannot do remote syscall.\n");
+	abort();
+    }
 
     if (save_registers(pid, &orig_regs) < 0)
 	abort();
 
     memcpy(&regs, &orig_regs, sizeof(regs));
-
-    loc = scribble_zone+0x10;
-
-    old_insn = ptrace(PTRACE_PEEKTEXT, pid, loc, 0);
-    if (errno) {
-	perror("ptrace peektext");
-	abort();
-    }
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, 0x050f) < 0) {
-	perror("ptrace poketext");
-	abort();
-    }
 
     regs.rax = syscall_no;
     if (use_rdi) regs.rdi = rdi;
@@ -320,7 +264,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (use_r8 ) regs.r8  = r8 ;
 
     /* Set up registers for ptrace syscall */
-    regs.rip = loc;
+    regs.rip = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
@@ -339,14 +283,11 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (save_registers(pid, &regs) < 0)
 	abort();
 
+    fprintf(stderr, "%s %ld %ld\n", syscall_name, regs.orig_rax, regs.rax);
+
     /* Return everything back to normal */
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
-
-    if (ptrace(PTRACE_POKETEXT, pid, loc, old_insn) < 0) {
-	perror("ptrace poketext");
-	abort();
-    }
 
     if (regs.rax < 0) {
 	errno = -regs.rax;
@@ -428,7 +369,15 @@ int r_mprotect(pid_t pid, void* start, size_t len, int flags)
 __rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
 int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa, struct k_sigaction *oksa, size_t masksz)
 {
-    return __r_rt_sigaction(pid, sig, ksa, oksa, masksz);
+    int ret;
+    if (ksa)
+	memcpy_into_target(pid, (void*)(scribble_zone+0x100), ksa, sizeof(*ksa));
+    ret = __r_rt_sigaction(pid, sig, ksa?(void*)(scribble_zone+0x100):NULL,
+	    oksa?(void*)(scribble_zone+0x100+sizeof(*ksa)):NULL, masksz);
+    if (oksa)
+	memcpy_from_target(pid, oksa, (void*)(scribble_zone+0x100+sizeof(*ksa)), sizeof(*oksa));
+
+    return ret;
 }
 
 __rsyscall3(int, ioctl, int, fd, int, req, void*, val);
@@ -442,8 +391,5 @@ int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen
 {
     return __r_getsockopt(pid, s, level, optname, optval, optlen);
 }
-
-
-
 
 /* vim:set ts=8 sw=4 noet: */

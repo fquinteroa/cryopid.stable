@@ -20,15 +20,6 @@
 #define ACTION_PRINT		0x02
 #define ACTION_LOADPRINT	0x03
 
-struct k_sigaction {
-    __sighandler_t sa_hand;
-    unsigned long sa_flags;
-    void (*sa_restorer)(void);
-    struct {
-	unsigned long sig[2];
-    } sa_mask;       /* mask last for extensibility */
-};
-
 #define GET_LIBRARIES_TOO          0x01
 #define GET_OPEN_FILE_CONTENTS     0x02
 
@@ -222,6 +213,7 @@ void read_chunk_vma(void *fptr, int action);
 void write_chunk_vma(void *fptr, struct cp_vma *data);
 extern int extra_prot_flags;
 extern long scribble_zone;
+extern long syscall_loc;
 
 /* cp_sighand.c */
 void read_chunk_sighand(void *fptr, int action);
