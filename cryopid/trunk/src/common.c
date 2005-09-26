@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <asm/page.h>
 
 #include "cryopid.h"
 

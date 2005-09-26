@@ -12,6 +12,10 @@ ifeq ($(ARCH), x86_64)
 ARCH_OFORMAT=elf64-x86-64
 endif
 
+ifeq ($(ARCH), sparc)
+ARCH_OFORMAT=elf32-sparc
+endif
+
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o arch/arch_r_objs.o
 W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o arch/arch_w_objs.o list.o 
 COMMON_OBJS = common.c arch/asmfuncs.o

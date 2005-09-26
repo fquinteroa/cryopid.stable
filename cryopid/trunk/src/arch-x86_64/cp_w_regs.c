@@ -38,7 +38,7 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, user_data)) {
 	fprintf(stderr, "[+] Process is probably in syscall. Returning EINTR.\n");
-	set_syscall_return(user_data, EINTR);
+	set_syscall_return(user_data, -EINTR);
     }
 
     chunk = xmalloc(sizeof(struct cp_chunk));

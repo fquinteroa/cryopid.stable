@@ -5,8 +5,6 @@
 #include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <linux/types.h>
-#include <asm/ldt.h>
-#include <asm/termios.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
@@ -32,7 +30,6 @@ struct proc_header_t {
 #define GET_LIBRARIES_TOO          0x01
 #define GET_OPEN_FILE_CONTENTS     0x02
 
-int do_syscall(pid_t pid, struct user_regs_struct *regs);
 int is_a_syscall(unsigned long inst, int canonical);
 int is_in_syscall(pid_t pid, struct user *user);
 void set_syscall_return(struct user* user, unsigned long val);

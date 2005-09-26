@@ -1,3 +1,4 @@
+#include <bits/types.h>
 #include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <sys/mman.h>
@@ -6,6 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <asm/page.h>
 
 #include "cpimage.h"
 #include "process.h"

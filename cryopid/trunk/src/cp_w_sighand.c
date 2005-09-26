@@ -1,4 +1,6 @@
+#include <bits/types.h>
 #include <linux/user.h>
+#include <linux/unistd.h>
 #include <sys/ptrace.h>
 #include <signal.h>
 #include <errno.h>

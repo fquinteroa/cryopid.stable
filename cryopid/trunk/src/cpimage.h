@@ -7,8 +7,7 @@
 #include <netinet/in.h>
 #include <linux/user.h>
 #include <linux/unistd.h>
-#include <asm/ldt.h>
-#include <asm/termios.h>
+#include <linux/termios.h>
 #include <signal.h>
 
 #include "list.h"
@@ -52,6 +51,7 @@ struct cp_regs {
 	int stopped;
 };
 
+#ifdef __i386__
 struct cp_i387_data {
 	struct user_i387_struct* i387_data;
 };
@@ -59,6 +59,7 @@ struct cp_i387_data {
 struct cp_tls {
 	struct user_desc* u;
 };
+#endif
 
 struct cp_vma {
     unsigned long start, length;
@@ -130,11 +131,13 @@ struct cp_chunk {
 	union {
 		struct cp_misc misc;
 		struct cp_regs regs;
-		struct cp_i387_data i387_data;
-		struct cp_tls tls;
 		struct cp_fd fd;
 		struct cp_vma vma;
 		struct cp_sighand sighand;
+#ifdef __i386__
+		struct cp_i387_data i387_data;
+		struct cp_tls tls;
+#endif
 	};
 };
 
@@ -172,6 +175,7 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image,
 void read_chunk_regs(void *fptr, int action);
 void write_chunk_regs(void *fptr, struct cp_regs *data);
 
+#ifdef __i386__
 /* cp_i387.c */
 void fetch_chunks_i387_data(pid_t pid, int flags, struct list *l);
 void read_chunk_i387_data(void *fptr, int action);
@@ -183,6 +187,7 @@ void read_chunk_tls(void *fptr, int action);
 void write_chunk_tls(void *fptr, struct cp_tls *data);
 void install_tls_segv_handler();
 extern int emulate_tls;
+#endif
 
 /* cp_fd.c */
 void fetch_chunks_fd(pid_t pid, int flags, struct list *l);

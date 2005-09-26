@@ -1,3 +1,4 @@
+#include <bits/types.h>
 #include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <sys/mman.h>
