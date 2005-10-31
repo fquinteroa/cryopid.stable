@@ -45,6 +45,27 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
 #endif
 }
 
+static void read_chunk_fd_socket_unix(void *fptr, int fd,
+	struct cp_socket_unix *u, int action)
+{
+    struct sockaddr_un sun;
+    int s;
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "UNIX socket ");
+
+    read_bit(fptr, &sun.sun_family, sizeof(sun.sun_family));
+    read_string(fptr, sun.sun_path, sizeof(sun.sun_path));
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "%s ", sun.sun_path);
+
+    if (action & ACTION_LOAD) {
+	syscall_check(s = socket(PF_UNIX, SOCK_STREAM, 0), 0, "socket(PF_UNIX)");
+	syscall_check(connect(s, (const struct sockaddr*)&sun, strlen(sun.sun_path)+2), 0, "connect");
+    }
+}
+
 void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)
 {
     read_bit(fptr, &fd->socket.proto, sizeof(int));
@@ -53,6 +74,8 @@ void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)
 	    read_chunk_fd_socket_tcp(fptr, fd->fd, &fd->socket.s_tcp, action);
 	    break;
 	case PROTO_UNIX:
+	    read_chunk_fd_socket_unix(fptr, fd->fd, &fd->socket.s_unix, action);
+	    break;
 	case PROTO_UDP:
 	default:
 	    if (action & ACTION_PRINT)
