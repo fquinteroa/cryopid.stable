@@ -68,6 +68,7 @@ Signal Handlers:
 - process signal masks (blocked, ignored)
 + stopped state
 - restart alarms
+- SIGWINCH me
 
 Compression:
 + LZF
