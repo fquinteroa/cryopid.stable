@@ -300,14 +300,14 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 {
     struct cp_chunk *chunk = NULL;
     char tmp_fn[30];
-    char map_line[128];
+    char map_line[1024];
     FILE *f;
     int vma_no = 0;
 
     snprintf(tmp_fn, 30, "/proc/%d/maps", pid);
     f = fopen(tmp_fn, "r");
 
-    while (fgets(map_line, 128, f)) {
+    while (fgets(map_line, sizeof(map_line), f)) {
 	if (!chunk)
 	    chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_VMA;
