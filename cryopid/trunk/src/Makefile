@@ -1,6 +1,6 @@
 # Disabling tcpcp support saves a few KB in the binary.
 USE_TCPCP=y
-USE_GTK=y
+USE_GTK=n
 
 ARCH=$(shell arch)
 
