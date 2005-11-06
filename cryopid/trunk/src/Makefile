@@ -22,7 +22,7 @@ W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_so
 COMMON_OBJS = common.c arch/asmfuncs.o
 STUB_TYPES = gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
-TARGETS = freeze
+TARGETS = freeze fork2_helper
 
 CFLAGS = -Wall -Os -I. -Iarch -D__$(ARCH)__
 
@@ -42,7 +42,6 @@ endif
 ifeq ($(USE_GTK),y)
 R_CHUNK_OBJS += gtk_support.o
 CFLAGS += -DUSE_GTK
-TARGETS += fork2_helper
 endif
 
 all: arch $(TARGETS)
