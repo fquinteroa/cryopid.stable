@@ -9,7 +9,7 @@
 
 static void* resolve(void *l, char *what)
 {
-	struct link_map *lm = (struct link_map *)(l);
+	struct link_map *lm;
 	
 	Elf32_Dyn *dyn;
 	Elf32_Sym *sym;
@@ -17,31 +17,31 @@ static void* resolve(void *l, char *what)
 
 	void *val = NULL;
 	
-	for(;lm != NULL; lm = lm->l_next) {
-		dyn = (Elf32_Dyn *)(unsigned int)(lm->l_ld);
-		//printf("dyn: 0x%lx (0x%lx)\n", dyn, lm->l_addr);
+	for (lm = (struct link_map *)l; lm != NULL; lm = lm->l_next) {
 		sym = NULL;
 		strtab = NULL;
 
-		for(; dyn->d_tag != DT_NULL; dyn++) {
-			if(dyn->d_tag == DT_STRTAB) strtab = (char *)(dyn->d_un.d_ptr);
-			if(dyn->d_tag == DT_SYMTAB) sym = (Elf32_Sym *)(dyn->d_un.d_ptr);
+		for (dyn = (Elf32_Dyn*)(lm->l_ld); dyn->d_tag != DT_NULL; dyn++) {
+			if (dyn->d_tag == DT_STRTAB)
+				strtab = (char *)(dyn->d_un.d_ptr);
+			if (dyn->d_tag == DT_SYMTAB)
+				sym = (Elf32_Sym *)(dyn->d_un.d_ptr);
 		}
 		
-		while(sym) {
-			if(sym->st_name > 0x100000)
+		while (sym) {
+			if (sym->st_name > 0x100000)
 				break;
-			if(strcmp(strtab + sym->st_name, what)  == 0) {
+			if (strcmp(strtab + sym->st_name, what) == 0) {
 				val = (void*)(lm->l_addr + sym->st_value);
 				if (sym->st_value) {
-					debug("--> we have found %s @ 0x%08x (0x%08lx)\n", strtab + sym->st_name, sym->st_value, (unsigned long)(lm->l_addr + sym->st_value));
+					debug("--> we have found %s @ 0x%08x (0x%08lx)\n",
+							strtab + sym->st_name, sym->st_value,
+							(unsigned long)(lm->l_addr + sym->st_value));
 					return val;
 				}
 			}
-			
 			sym++;
 		}
-		
 	}
 	return val;
 }
@@ -59,11 +59,11 @@ static void* find_lm()
 	elf = (Elf32_Ehdr*)0x8048000;
 	phdr = (Elf32_Phdr *)((unsigned char *)(elf) + elf->e_phoff);
 	
-	for(i = 0; i < elf->e_phnum; i++) {
-		if(phdr[i].p_type == PT_DYNAMIC) break;
-	}
+	for (i = 0; i < elf->e_phnum; i++)
+		if (phdr[i].p_type == PT_DYNAMIC)
+			break;
 
-	if(i == elf->e_phnum) {
+	if (i == elf->e_phnum) {
 		printf("Not a dynamic elf file?\n");
 		return NULL;
 	}
@@ -74,18 +74,18 @@ static void* find_lm()
 	cnt = phdr->p_filesz / sizeof(Elf32_Dyn);
 
 	got = NULL;
-	for(i = 0; i < cnt; i++) {
-		if(dyn[i].d_tag == DT_PLTGOT) got = (unsigned long *)(dyn[i].d_un.d_ptr);
-	}
+	for (i = 0; i < cnt; i++)
+		if (dyn[i].d_tag == DT_PLTGOT)
+			got = (unsigned long *)(dyn[i].d_un.d_ptr);
 
-	if(got == NULL) {
+	if (got == NULL) {
 		printf("Unable to find GOT\n");
 		return NULL;
 	}
 
 	lm = (struct link_map *)(got[1]);
 	
-	printf("link_map @ 0x%08lx\n", (unsigned long)lm);
+	debug("link_map @ 0x%08lx\n", (unsigned long)lm);
 
 	return lm;
 }
