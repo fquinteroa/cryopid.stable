@@ -77,6 +77,9 @@ int read_chunk(void *fptr, int action)
     read_bit(fptr, &type, sizeof(type));
 
     switch (type) {
+	case CP_CHUNK_HEADER:
+	    read_chunk_header(fptr, action);
+	    break;
 	case CP_CHUNK_MISC:
 	    read_chunk_misc(fptr, action);
 	    break;

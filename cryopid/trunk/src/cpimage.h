@@ -23,14 +23,15 @@
 #define GET_OPEN_FILE_CONTENTS     0x02
 
 /* Constants for cp_chunk.type */
-#define CP_CHUNK_MISC		0x01
-#define CP_CHUNK_REGS		0x02
-#define CP_CHUNK_I387_DATA	0x03
-#define CP_CHUNK_TLS		0x04
-#define CP_CHUNK_FD		0x05
-#define CP_CHUNK_VMA		0x06
-#define CP_CHUNK_SIGHAND	0x07
-#define CP_CHUNK_FINAL		0x08
+#define CP_CHUNK_HEADER		0x01
+#define CP_CHUNK_MISC		0x02
+#define CP_CHUNK_REGS		0x03
+#define CP_CHUNK_I387_DATA	0x04
+#define CP_CHUNK_TLS		0x05
+#define CP_CHUNK_FD		0x06
+#define CP_CHUNK_VMA		0x07
+#define CP_CHUNK_SIGHAND	0x08
+#define CP_CHUNK_FINAL		0x09
 
 #define CP_CHUNK_MAGIC		0xC0DE
 
@@ -39,6 +40,16 @@
 #define CP_CHUNK_FD_CONSOLE	0x02
 #define CP_CHUNK_FD_SOCKET	0x03
 #define CP_CHUNK_FD_MAXFD	0x04
+
+struct cp_header {
+	int am_leader;
+	int clone_flags;
+	pid_t pid, tid, pgid, sid;
+	uid_t uid;
+	gid_t gid;
+	int n_children;
+	off_t *children_offsets;
+};
 
 struct cp_misc {
 	char *cmdline;
@@ -163,6 +174,11 @@ void write_process(int fd, struct list l);
 void discard_bit(void *fptr, int length);
 void get_process(pid_t pid, int flags, struct list *l, long *heap_start);
 unsigned int checksum(char *ptr, int len, unsigned int start);
+
+/* cp_header.c */
+void fetch_chunk_header(void *fptr, int flags, struct list *process_image);
+void read_chunk_header(void *fptr, int action);
+void write_chunk_header(void *fptr, struct cp_header *data);
 
 /* cp_misc.c */
 void fetch_chunk_misc(void *fptr, int flags, struct list *process_image);

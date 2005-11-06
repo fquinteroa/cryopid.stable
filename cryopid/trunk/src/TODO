@@ -49,7 +49,7 @@ File descriptors:
 - allow for not killing TCP sockets when saved
 - tcpcpd to firewall TCP connections when being migrated
 - UDP sockets
-- Unix sockets
++ Unix sockets
 - sound devices (ALSA & OSS)
 - large file support
 - deleted files (scrape out and regenerate)

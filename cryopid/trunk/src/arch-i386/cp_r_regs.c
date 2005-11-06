@@ -23,9 +23,20 @@ static void load_chunk_regs(struct user *user, int stopped)
     r->esp-=4;
     *(long*)r->esp = r->eflags;
     
-    code[0xffc] = 'A';
-    /* set up a temporary stack for use */
-    *cp++=0xbc;*(long*)(cp) = (long)code+0x0ff0; cp+=4; /* mov 0x11000, %esp */
+    /* set up gs */
+    if (!emulate_tls && r->gs != 0) {
+	*cp++=0x66;*cp++=0xb8; *(short*)(cp) = r->gs; cp+=2; /* mov foo, %eax  */
+	*cp++=0x8e;*cp++=0xe8; /* mov %eax, %gs */
+    }
+
+    *cp++=0xbd;*(long*)(cp) = r->ebp; cp+=4; /* mov foo, %ebp  */
+    *cp++=0xbc;*(long*)(cp) = r->esp; cp+=4; /* mov foo, %esp  */
+
+#ifdef USE_GTK
+    extern long cryopid_migrate_gtk_windows;
+    *cp++=0xb8;*(long*)(cp) = &cryopid_migrate_gtk_windows; cp+=4; /* mov addr,%eax */
+    *cp++=0xff;*cp++=0xd0; /* call *%eax */
+#endif /* USE_GTK */
 
     /* munmap our custom malloc space */
     *cp++=0xb8;*(long*)(cp) = __NR_munmap; cp+=4; /* mov foo, %eax  */
@@ -40,12 +51,6 @@ static void load_chunk_regs(struct user *user, int stopped)
 	*cp++=0xbb;*(long*)(cp) = RESUMER_START; cp+=4; /* mov foo, %ebx  */
 	*cp++=0xb9;*(long*)(cp) = RESUMER_END-RESUMER_START; cp+=4; /* mov foo, %ecx  */
 	*cp++=0xcd;*cp++=0x80; /* int $0x80 */
-    }
-
-    /* set up gs */
-    if (!emulate_tls && r->gs != 0) {
-	*cp++=0x66;*cp++=0xb8; *(short*)(cp) = r->gs; cp+=2; /* mov foo, %eax  */
-	*cp++=0x8e;*cp++=0xe8; /* mov %eax, %gs */
     }
 
     /* restore registers */
@@ -75,6 +80,9 @@ static void load_chunk_regs(struct user *user, int stopped)
     *(unsigned long*)(cp) = r->eip; cp+= 4;
     asm("mov %%cs,%w0": "=q"(r->cs)); /* ensure we use the right CS for the current kernel */
     *(unsigned short*)(cp) = r->cs; cp+= 2; /* jmp cs:foo */
+    syscall_check(
+	(int)mprotect((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_EXEC),
+	    0, "mmap");
 }
 
 void read_chunk_regs(void *fptr, int action)
