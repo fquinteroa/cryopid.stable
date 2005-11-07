@@ -53,6 +53,7 @@ File descriptors:
 - sound devices (ALSA & OSS)
 - large file support
 - deleted files (scrape out and regenerate)
+- interactive prompting for file seek offsets and restoration
 
 VMAs:
 + memory segments
