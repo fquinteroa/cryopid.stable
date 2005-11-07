@@ -3,6 +3,7 @@
 #include <asm/ldt.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
+#include <errno.h>
 
 #include "cpimage.h"
 #include "cryopid.h"
