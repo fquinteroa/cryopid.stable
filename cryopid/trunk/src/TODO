@@ -71,6 +71,24 @@ Signal Handlers:
 - restart alarms
 - SIGWINCH me
 
+IPC:
+- shared memory
+- semaphores
+- message queues
+
+Threads:
+- Identify common:
+  - CLONE_PARENT
+  - CLONE_FS
+  - CLONE_FILES
+  - CLONE_NEWNS
+  - CLONE_SIGHAND
+  - CLONE_THREAD
+  - CLONE_VM
+- TLS
+- TID
+- futexes
+
 Compression:
 + LZF
 - LZF in-place decompression
