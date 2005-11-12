@@ -9,25 +9,28 @@
 #include "cryopid.h"
 #include "x.h"
 
-static void* resolve(void *l, char *what)
+char display_environ[80];
+
+static void* resolve(struct link_map *l, char *what)
 {
     struct link_map *lm;
-    
     Elf32_Dyn *dyn;
     Elf32_Sym *sym;
     char *strtab;
 
     void *val = NULL;
     
-    for (lm = (struct link_map *)l; lm != NULL; lm = lm->l_next) {
+    for (lm = l; lm != NULL; lm = lm->l_next) {
 	sym = NULL;
 	strtab = NULL;
 
+	printf("0x%lx\n", lm->l_ld);
 	for (dyn = (Elf32_Dyn*)(lm->l_ld); dyn->d_tag != DT_NULL; dyn++) {
 	    if (dyn->d_tag == DT_STRTAB)
 		strtab = (char *)(dyn->d_un.d_ptr);
 	    if (dyn->d_tag == DT_SYMTAB)
 		sym = (Elf32_Sym *)(dyn->d_un.d_ptr);
+	    printf(" 0x%lx\n", dyn);
 	}
 	
 	while (sym) {
@@ -44,6 +47,9 @@ static void* resolve(void *l, char *what)
 	    }
 	    sym++;
 	}
+    }
+    if (val == NULL) {
+	fprintf(stderr, "Argh! Couldn't find %s in binary\n", what);
     }
     return val;
 }
@@ -111,8 +117,8 @@ void cryopid_migrate_gtk_windows()
 
     GList *top_levels = _gdk_window_get_toplevels();
     GdkDisplay *old_display = _gdk_display_get_default();
-    printf("Opening\n");
-    GdkDisplay *new_display = _gdk_display_open(":0");
+    printf("Opening %s\n", display_environ);
+    GdkDisplay *new_display = _gdk_display_open(display_environ);
     GdkDisplayManager *m = _gdk_display_manager_get();
     _gdk_display_manager_set_default_display(m, new_display);
 

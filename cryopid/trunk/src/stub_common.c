@@ -26,6 +26,9 @@ int real_argc;
 char** real_argv;
 char** real_environ;
 extern char** environ;
+#ifdef USE_GTK
+extern char display_environ[80];
+#endif
 
 static void read_process()
 {
@@ -40,7 +43,7 @@ static void read_process()
 
     /* Cleanup the input file. */
     stream_ops->finish(fptr);
-    close(console_fd);
+    //close(console_fd);
 
     /* The trampoline code should now be magically loaded at 0x10000.
      * Jumping there will restore registers and continue execution.
@@ -191,8 +194,13 @@ int main(int argc, char**argv, char **envp)
 
     for(i = 0; envp[i]; i++); /* count environment variables */
     real_environ = xmalloc((sizeof(char*)*i)+1);
-    for(i = 0; envp[i]; i++)
+    for(i = 0; envp[i]; i++) {
 	*real_environ++ = strdup(envp[i]);
+#ifdef USE_GTK
+	if (strncmp(envp[i], "DISPLAY=", 8) == 0)
+	    strcpy(display_environ, envp[i]+8);
+#endif
+    }
     *real_environ = NULL;
     environ = real_environ;
 
