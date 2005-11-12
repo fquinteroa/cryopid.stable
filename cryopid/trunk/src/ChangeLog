@@ -1,3 +1,8 @@
+0.6.0
+ * Support for pipes to self
+ * Better support for UNIX sockets
+ * Rudimentary support for Gtk+ applications
+
 0.5.2
  * Fix more AMD64 issues.
  * Always build stubs with dietlibc.

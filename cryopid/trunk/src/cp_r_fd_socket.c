@@ -50,23 +50,22 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
 }
 
 static void read_chunk_fd_socket_unix(void *fptr, int fd,
-	struct cp_socket_unix *u, int action)
+	struct cp_socket_unix *fu, int action)
 {
-    struct sockaddr_un sun;
+    struct cp_socket_unix u;
     int s, xsocket;
 
     if (action & ACTION_PRINT)
 	fprintf(stderr, "UNIX socket ");
 
-    read_bit(fptr, &sun.sun_family, sizeof(sun.sun_family));
-    read_string(fptr, sun.sun_path, sizeof(sun.sun_path));
+    read_bit(fptr, &u, sizeof(u));
 
 #ifdef USE_GTK
     /* Determine if it's an X server socket (match against m#/X\d+$#) */
     char *p;
     xsocket = 0;
-    for (p = &sun.sun_path[strlen(sun.sun_path)-1];
-	    p >= sun.sun_path && *p != '/';
+    for (p = &u.peername.sun_path[strlen(u.peername.sun_path)-1];
+	    p >= u.peername.sun_path && *p != '/';
 	    p--) {
 	if (!isdigit(*p)) {
 	    xsocket = (*p == 'X');
@@ -74,14 +73,14 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
 	}
     }
     /* Make sure we actually had some digits */
-    if (xsocket && !isdigit(sun.sun_path[strlen(sun.sun_path)-1]))
+    if (xsocket && !isdigit(u.peername.sun_path[strlen(u.peername.sun_path)-1]))
 	xsocket = 0;
     if (xsocket)
-	snprintf(sun.sun_path, 20, "(X server %s)", p+1);
+	snprintf(u.peername.sun_path, 20, "(X server %s)", p+1);
 #endif
 
     if (action & ACTION_PRINT)
-	fprintf(stderr, "%s ", sun.sun_path);
+	fprintf(stderr, "%s -> %s ", u.sockname.sun_path, u.peername.sun_path);
 
     if (action & ACTION_LOAD) {
 #ifdef USE_GTK
@@ -99,9 +98,19 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
 	else
 #endif
 	{
-	    syscall_check(s = socket(PF_UNIX, SOCK_STREAM, 0), 0, "socket(PF_UNIX)");
-	    if (connect(s, (const struct sockaddr*)&sun, strlen(sun.sun_path)+2) < 0)
-		fprintf(stderr, "connect to %s: %s", sun.sun_path, strerror(errno));
+	    syscall_check(s = socket(PF_UNIX, u.type, 0), 0, "socket(PF_UNIX)");
+	    if (u.sockname.sun_path[0]) {
+		if (bind(s, (const struct sockaddr*)&u.sockname, SUN_LEN(&u.sockname)) < 0)
+		    fprintf(stderr, "bind to %s: %s", u.sockname.sun_path, strerror(errno));
+	    }
+	    if (u.peername.sun_path[0]) {
+		if (connect(s, (const struct sockaddr*)&u.peername, SUN_LEN(&u.peername)) < 0)
+		    fprintf(stderr, "connect to %s: %s", u.peername.sun_path, strerror(errno));
+	    } else if (u.listening) {
+		if (listen(s, 8) < 0) { /* FIXME: can we get the backlog value somehow? */
+		    fprintf(stderr, "listen: %s", strerror(errno));
+		}
+	    }
 	}
 	if (s != fd) {
 	    dup2(s, fd);

@@ -39,6 +39,9 @@ void write_chunk_fd(void *fptr, struct cp_fd *data)
 	case CP_CHUNK_FD_FILE:
 	    write_chunk_fd_file(fptr, &data->file);
 	    break;
+	case CP_CHUNK_FD_FIFO:
+	    write_chunk_fd_fifo(fptr, &data->fifo);
+	    break;
 	case CP_CHUNK_FD_SOCKET:
 	    write_chunk_fd_socket(fptr, &data->socket);
 	    break;
@@ -145,9 +148,13 @@ void fetch_chunks_fd(pid_t pid, int flags, struct list *l)
 		if (stat_buf.st_size == chunk->fd.offset)
 		    chunk->fd.offset = -2; /* Seek to end */
 		break;
+	    case S_IFIFO:
+		fetch_fd_fifo(pid, flags, chunk->fd.fd, stat_buf.st_ino,
+			&chunk->fd.fifo);
+		chunk->fd.type = CP_CHUNK_FD_FIFO;
+		break;
 	    case S_IFBLK:
 	    case S_IFDIR:
-	    case S_IFIFO:
 	    case S_IFLNK:
 	    default:
 		/* ummmm */

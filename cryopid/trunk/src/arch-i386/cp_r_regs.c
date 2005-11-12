@@ -34,7 +34,7 @@ static void load_chunk_regs(struct user *user, int stopped)
 
 #ifdef USE_GTK
     extern long cryopid_migrate_gtk_windows;
-    *cp++=0xb8;*(long*)(cp) = &cryopid_migrate_gtk_windows; cp+=4; /* mov addr,%eax */
+    *cp++=0xb8;*(long*)(cp) = (long)&cryopid_migrate_gtk_windows; cp+=4; /* mov addr,%eax */
     *cp++=0xff;*cp++=0xd0; /* call *%eax */
 #endif /* USE_GTK */
 

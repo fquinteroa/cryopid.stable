@@ -71,6 +71,9 @@ void read_chunk_fd(void *fptr, int action)
 	case CP_CHUNK_FD_FILE:
 	    read_chunk_fd_file(fptr, &fd, action);
 	    break;
+	case CP_CHUNK_FD_FIFO:
+	    read_chunk_fd_fifo(fptr, &fd, action);
+	    break;
 	case CP_CHUNK_FD_SOCKET:
 	    read_chunk_fd_socket(fptr, &fd, action);
 	    break;

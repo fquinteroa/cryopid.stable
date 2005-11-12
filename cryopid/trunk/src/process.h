@@ -43,6 +43,8 @@ extern int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa,
 	struct k_sigaction *oksa, size_t masksz);
 extern int r_ioctl(pid_t pid, int fd, int req, void* val);
 extern int r_socketcall(pid_t pid, int call, void* args);
+extern int r_getpeername(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen);
+extern int r_getsockname(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen);
 
 #endif /* _PROCESS_H_ */
 

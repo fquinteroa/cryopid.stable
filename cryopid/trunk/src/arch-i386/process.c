@@ -382,8 +382,8 @@ int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen
     int ret;
 
     args[0] = s;
-    args[1] = SOL_TCP;
-    args[2] = TCP_MAXICISIZE;
+    args[1] = level;
+    args[2] = optname;
     args[3] = scribble_zone+0x60;
     args[4] = scribble_zone+0x50;
 
@@ -397,6 +397,54 @@ int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen
 
     memcpy_from_target(pid, optlen, (void*)(scribble_zone+0x50), sizeof(*optlen));
     memcpy_from_target(pid, optval, (void*)(scribble_zone+0x60), *optlen);
+
+    return ret;
+}
+
+int r_getpeername(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
+{
+    long args[3];
+    int ret;
+
+    args[0] = s;
+    args[1] = scribble_zone+0x20;
+    args[2] = scribble_zone+0x10;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x0), args, sizeof(args));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_socketcall(pid, SYS_GETPEERNAME, (void*)(scribble_zone+0x0));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
+
+    return ret;
+}
+
+int r_getsockname(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
+{
+    long args[3];
+    int ret;
+
+    args[0] = s;
+    args[1] = scribble_zone+0x20;
+    args[2] = scribble_zone+0x10;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x0), args, sizeof(args));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_socketcall(pid, SYS_GETSOCKNAME, (void*)(scribble_zone+0x0));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
 
     return ret;
 }
