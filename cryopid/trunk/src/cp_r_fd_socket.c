@@ -45,46 +45,6 @@ static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *t
 #endif
 }
 
-#ifdef USE_GTK
-#include "x.h"
-static void x_responder(int fd) {
-    char buf[4096];
-    int len;
-    unsigned short seq = 0;
-    static char reply[] =
-	"\1\1\0\0\0\0\0\0<\0`\3\4\0\0\0\0\0\0\0\360R\214\3\210\357\37\t\0\0\0\0";
-    while ((len = read(fd, buf, sizeof(buf))) > 0) {
-	char *p = buf;
-	while (p - buf < len) {
-	    char *rstart = p;
-	    int rlen = p[3] << 10 | p[2] << 2;
-	    if (rlen > len - (p-buf))
-		rlen = len - (p-buf);
-#if 0
-	    printf("Request: %s (%d) (len %d)\n", request_to_str(p[0]), p[0], rlen);
-	    p += 4;
-	    while (p - rstart < rlen) {
-		int i;
-		printf("\t");
-		for (i = 0; i < 16; i++) {
-		    if (p - rstart >= rlen)
-			break;
-		    printf("%.02x ", (unsigned char)*p);
-		    p++;
-		}
-		printf("\n");
-	    }
-#endif
-	    *(unsigned short*)(reply+2) = ++seq;
-	    write(fd, reply, sizeof(reply)-1);
-	    p = rstart + rlen;
-	}
-    }
-    close(fd);
-    _exit(0);
-}
-#endif /* USE_GTK */
-
 static void read_chunk_fd_socket_unix(void *fptr, int fd,
 	struct cp_socket_unix *u, int action)
 {
@@ -105,7 +65,8 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
 	int sp[2];
 	socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
 	s = sp[1];
-	if (!fork()) {
+	if (!clone(0, 0)) { /* don't give parent notification on exit */
+	    extern void x_responder(int);
 	    close(sp[1]);
 	    x_responder(sp[0]);
 	} else
