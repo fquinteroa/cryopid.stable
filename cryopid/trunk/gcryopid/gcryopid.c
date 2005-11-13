@@ -50,6 +50,10 @@ static void point_and_freeze(GtkWidget *widget, GdkEvent *event, gpointer *data)
 	xw = GetWindow(GDK_DISPLAY());
 	g_print("Moo: 0x%lx\n", xw);
 
+	WnckScreen *ws;
+	ws = wnck_screen_get_default();
+	wnck_screen_force_update(ws);
+
 	WnckWindow *ww = wnck_window_get(xw);
 	if (ww == NULL) {
 		printf("No WnckWindow\n");
