@@ -10,6 +10,7 @@
 #include "x.h"
 
 char display_environ[80];
+int need_gtk = 0;
 
 static void* resolve(struct link_map *l, char *what)
 {
@@ -24,13 +25,11 @@ static void* resolve(struct link_map *l, char *what)
 	sym = NULL;
 	strtab = NULL;
 
-	printf("0x%lx\n", lm->l_ld);
 	for (dyn = (Elf32_Dyn*)(lm->l_ld); dyn->d_tag != DT_NULL; dyn++) {
 	    if (dyn->d_tag == DT_STRTAB)
 		strtab = (char *)(dyn->d_un.d_ptr);
 	    if (dyn->d_tag == DT_SYMTAB)
 		sym = (Elf32_Sym *)(dyn->d_un.d_ptr);
-	    printf(" 0x%lx\n", dyn);
 	}
 	
 	while (sym) {
@@ -39,18 +38,19 @@ static void* resolve(struct link_map *l, char *what)
 	    if (strcmp(strtab + sym->st_name, what) == 0) {
 		val = (void*)(lm->l_addr + sym->st_value);
 		if (sym->st_value) {
-		    debug("--> we have found %s @ 0x%08x (0x%08lx)\n",
+		    /*
+		    debug("--> we have found %s @ 0x%08x (0x%08lx)",
 			    strtab + sym->st_name, sym->st_value,
 			    (unsigned long)(lm->l_addr + sym->st_value));
+			    */
 		    return val;
 		}
 	    }
 	    sym++;
 	}
     }
-    if (val == NULL) {
+    if (val == NULL)
 	fprintf(stderr, "Argh! Couldn't find %s in binary\n", what);
-    }
     return val;
 }
 
@@ -93,7 +93,7 @@ static void* find_lm()
 
     lm = (struct link_map *)(got[1]);
     
-    debug("link_map @ 0x%08lx\n", (unsigned long)lm);
+    //debug("link_map @ 0x%08lx", (unsigned long)lm);
 
     return lm;
 }
@@ -101,23 +101,42 @@ static void* find_lm()
 void cryopid_migrate_gtk_windows()
 {
     void *lm = find_lm();
-    GdkDisplay *(*_gdk_display_get_default)() = resolve(lm, "gdk_display_get_default");
-    GdkDisplayManager *(*_gdk_display_manager_get)() = resolve(lm, "gdk_display_manager_get");
-    void (*_gdk_display_manager_set_default_display)(GdkDisplayManager*, GdkDisplay*) = resolve(lm, "gdk_display_manager_set_default_display");
-    GdkDisplay *(*_gdk_display_open)(char*) = resolve(lm, "gdk_display_open");
-    GdkScreen *(*_gdk_display_get_default_screen)(GdkDisplay*) = resolve(lm, "gdk_display_get_default_screen");
-    GList *(*_gdk_window_get_toplevels)() = resolve(lm, "gdk_window_get_toplevels");
-    void (*_gdk_window_get_user_data)(GdkWindow*,void**) = resolve(lm, "gdk_window_get_user_data");
-    void (*_gtk_window_set_screen)(GtkWindow*,GdkScreen*) = resolve(lm, "gtk_window_set_screen");
-    GType (*gtk_window_get_type)(void) = resolve(lm, "gtk_window_get_type");
-    void (*_g_list_foreach)(GList*,GFunc,void*) = resolve(lm, "g_list_foreach");
-    void (*_g_list_free)(GList*) = resolve(lm, "g_list_free");
-    void (*_gdk_display_close)(GdkDisplay*) = resolve(lm, "gdk_display_close");
-    int (*g_type_check_instance_is_a)(GTypeInstance*, GType) = resolve(lm, "g_type_check_instance_is_a");
+#define find_symbol(name, rettype, params) \
+    	rettype (*_##name)params = resolve(lm, #name); \
+    	if (_##name == NULL) \
+	    return;
+#define find_symbol_noprefix(name, rettype, params) \
+    	rettype (*name)params = resolve(lm, #name); \
+    	if (name == NULL) \
+	    return;
+    find_symbol(gdk_display_get_default, GdkDisplay*, ());
+    find_symbol(gdk_display_manager_get, GdkDisplayManager*, ());
+    find_symbol(gdk_display_manager_set_default_display, void, (GdkDisplayManager*, GdkDisplay*));
+    find_symbol(gdk_display_open, GdkDisplay*, (char*));
+    find_symbol(gdk_display_get_default_screen, GdkScreen*, (GdkDisplay*));
+    find_symbol(gdk_window_get_toplevels, GList*, ());
+    find_symbol(gdk_window_get_user_data, void, (GdkWindow*,void**));
+    find_symbol(gtk_window_set_screen, void, (GtkWindow*,GdkScreen*));
+    find_symbol(g_list_foreach, void, (GList*,GFunc,void*));
+    find_symbol(g_list_free, void, (GList*));
+    find_symbol(gdk_display_close, void, (GdkDisplay*));
+    find_symbol_noprefix(gtk_window_get_type, GType, (void));
+    find_symbol_noprefix(g_type_check_instance_is_a, int, (GTypeInstance*, GType));
 
     GList *top_levels = _gdk_window_get_toplevels();
+
+    int need_moving = 0;
+    static void need_moving_func(GdkWindow *w, void *nothing) {
+	GtkWindow *wd;
+	_gdk_window_get_user_data(w, (void*)&wd);
+	if (GTK_IS_WINDOW(wd))
+	    need_moving = 1;
+    }
+    _g_list_foreach(top_levels, (GFunc)need_moving_func, NULL);
+    if (!need_moving)
+	return;
+
     GdkDisplay *old_display = _gdk_display_get_default();
-    printf("Opening %s\n", display_environ);
     GdkDisplay *new_display = _gdk_display_open(display_environ);
     GdkDisplayManager *m = _gdk_display_manager_get();
     _gdk_display_manager_set_default_display(m, new_display);
@@ -129,10 +148,8 @@ void cryopid_migrate_gtk_windows()
 	if (GTK_IS_WINDOW(wd))
 	    _gtk_window_set_screen (wd, s);
     }
-    printf("Moving\n");
     _g_list_foreach(top_levels, (GFunc)move_it, (void*)screen);
     _g_list_free(top_levels);
-    //printf("Closing\n");
     //_gdk_display_close(old_display);
 }
 

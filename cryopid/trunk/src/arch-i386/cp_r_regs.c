@@ -7,6 +7,10 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
+#ifdef USE_GTK
+extern int need_gtk;
+#endif
+
 static void load_chunk_regs(struct user *user, int stopped)
 {
     char *cp, *code = (char*)TRAMPOLINE_ADDR;
@@ -33,9 +37,11 @@ static void load_chunk_regs(struct user *user, int stopped)
     *cp++=0xbc;*(long*)(cp) = r->esp; cp+=4; /* mov foo, %esp  */
 
 #ifdef USE_GTK
-    extern long cryopid_migrate_gtk_windows;
-    *cp++=0xb8;*(long*)(cp) = (long)&cryopid_migrate_gtk_windows; cp+=4; /* mov addr,%eax */
-    *cp++=0xff;*cp++=0xd0; /* call *%eax */
+    if (need_gtk) {
+	extern long cryopid_migrate_gtk_windows;
+	*cp++=0xb8;*(long*)(cp) = (long)&cryopid_migrate_gtk_windows; cp+=4; /* mov addr,%eax */
+	*cp++=0xff;*cp++=0xd0; /* call *%eax */
+    }
 #endif /* USE_GTK */
 
     /* munmap our custom malloc space */
@@ -67,6 +73,12 @@ static void load_chunk_regs(struct user *user, int stopped)
 	*cp++=0xb9;*(long*)(cp) = SIGSTOP; cp+=4; /* mov $19, %ecx (SIGSTOP) */
 	*cp++=0xcd;*cp++=0x80;               /* int $0x80 */
     }
+
+    /* raise a SIGWINCH */
+    *cp++=0xb8;*(long*)(cp) = __NR_kill; cp+=4; /* mov $37, %eax (kill) */
+    *cp++=0x31;*cp++=0xdb;               /* xor %ebx, %ebx       */
+    *cp++=0xb9;*(long*)(cp) = SIGWINCH; cp+=4; /* mov $19, %ecx (SIGWINCH) */
+    *cp++=0xcd;*cp++=0x80;               /* int $0x80 */
 
     /* and the rest of the registers we might have just modified */
     *cp++=0xb8;*(long*)(cp) = r->eax; cp+=4; /* mov foo, %eax  */
