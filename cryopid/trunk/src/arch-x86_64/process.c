@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <linux/net.h>
+#include <linux/user.h>
 #include <asm/page.h>
 
 #include "cryopid.h"
@@ -340,6 +341,26 @@ static inline unsigned long __remote_syscall(pid_t pid,
 		1, (unsigned long)arg5); \
     }
 
+__rsyscall3(off_t, read, int, fd, void*, buf, size_t, count);
+ssize_t r_read(pid_t pid, int fd, void* buf, size_t count)
+{
+    int off;
+    off = 0;
+    while (count > 0) {
+	int amt = PAGE_SIZE; /* must be less than size of scribble zone */
+	int err;
+	if (count < amt)
+	    amt = count;
+	err = __r_read(pid, fd, (void*)scribble_zone, amt);
+	if (err <= 0)
+	    return err;
+	memcpy_from_target(pid, (char*)buf + off, (void*)scribble_zone, err);
+	off += err;
+	count -= err;
+    }
+    return off;
+}
+
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
 off_t r_lseek(pid_t pid, int fd, off_t offset, int whence)
 {
@@ -379,9 +400,47 @@ int r_ioctl(pid_t pid, int fd, int req, void* val)
 }
 
 __rsyscall5(int, getsockopt, int, s, int, level, int, optname, void*, optval, socklen_t*, optlen);
-int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen)
+
+__rsyscall3(int, getpeername, int, s, struct sockaddr*, name, socklen_t*, namelen);
+int r_getpeername(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
 {
-    return __r_getsockopt(pid, s, level, optname, optval, optlen);
+    int ret;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_getpeername(pid, s,
+	    (void*)(scribble_zone+0x10),
+	    (void*)(scribble_zone+0x20));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
+
+    return ret;
+}
+
+__rsyscall3(int, getsockname, int, s, struct sockaddr*, name, socklen_t*, namelen);
+int r_getsockname(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
+{
+    int ret;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_getsockname(pid, s,
+	    (void*)(scribble_zone+0x10),
+	    (void*)(scribble_zone+0x20));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
+
+    return ret;
 }
 
 __rsyscall2(int, arch_prctl, int, code, unsigned long, addr);

@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <asm/prctl.h>
+#include <asm/page.h>
 
 #include "cryopid.h"
 #include "cpimage.h"

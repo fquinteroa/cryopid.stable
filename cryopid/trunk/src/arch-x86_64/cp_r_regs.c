@@ -24,14 +24,27 @@ static void load_chunk_regs(struct user *user, int stopped)
     r->rsp-=8;
     *(long*)r->rsp = r->rip;
 
+    /* set fs_base */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
+    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
+    *cp++=0x48; *cp++=0xbf;
+    *(long*)(cp) = ARCH_SET_FS; cp+=8; /* mov foo, %rdi  */
+    *cp++=0x48; *cp++=0xbe;
+    *(long*)(cp) = r->fs_base; cp+=8; /* mov foo, %rsi  */
+    *cp++=0x0f;*cp++=0x05; /* syscall */
+
+    /* set gs_base */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
+    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
+    *cp++=0x48; *cp++=0xbf;
+    *(long*)(cp) = ARCH_SET_GS; cp+=8; /* mov foo, %rdi  */
+    *cp++=0x48; *cp++=0xbe;
+    *(long*)(cp) = r->gs_base; cp+=8; /* mov foo, %rsi  */
+    *cp++=0x0f;*cp++=0x05; /* syscall */
+
     /* put eflags onto the process' stack so we can pop it off */
     r->rsp-=8;
     *(long*)r->rsp = r->eflags;
-
-    code[0xffc] = 'A';
-    /* set up a temporary stack for use */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc4;
-    *(int*)(cp) = ((long)code&0xffffffff)+0x0ff0; cp+=4; /* mov 0x11000, %rsp */
 
     /* munmap our custom malloc space */
     *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
@@ -51,24 +64,6 @@ static void load_chunk_regs(struct user *user, int stopped)
     *(long*)(cp) = RESUMER_END-RESUMER_START; cp+=8; /* mov foo, %rsi  */
     *cp++=0x0f;*cp++=0x05; /* syscall */
 
-    /* set fs_base */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
-    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
-    *cp++=0x48; *cp++=0xbf;
-    *(long*)(cp) = ARCH_SET_FS; cp+=8; /* mov foo, %rdi  */
-    *cp++=0x48; *cp++=0xbe;
-    *(long*)(cp) = r->fs_base; cp+=8; /* mov foo, %rsi  */
-    *cp++=0x0f;*cp++=0x05; /* syscall */
-
-    /* set gs_base */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
-    *(int*)(cp) = __NR_arch_prctl; cp+=4; /* mov foo, %rax  */
-    *cp++=0x48; *cp++=0xbf;
-    *(long*)(cp) = ARCH_SET_GS; cp+=8; /* mov foo, %rdi  */
-    *cp++=0x48; *cp++=0xbe;
-    *(long*)(cp) = r->gs_base; cp+=8; /* mov foo, %rsi  */
-    *cp++=0x0f;*cp++=0x05; /* syscall */
-
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {
 	*cp++=0x48; *cp++=0xc7; *cp++=0xc0;
@@ -78,6 +73,14 @@ static void load_chunk_regs(struct user *user, int stopped)
 	*(int*)(cp) = SIGSTOP; cp+=4;       /* mov $19, %rsi (SIGSTOP) */
 	*cp++=0x0f;*cp++=0x05;              /* syscall                 */
     }
+
+    /* raise a SIGWINCH */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
+    *(int*)(cp) = __NR_kill; cp+=4;     /* mov $37, %eax (kill)    */
+    *cp++=0x48; *cp++=0x31; *cp++=0xff; /* xor %rdi, %rdi          */
+    *cp++=0x48; *cp++=0xc7; *cp++=0xc6;
+    *(int*)(cp) = SIGWINCH; cp+=4;       /* mov $19, %rsi (SIGWINCH) */
+    *cp++=0x0f;*cp++=0x05;              /* syscall                 */
 
     /* restore registers */
     *cp++=0x49; *cp++=0xbf; *(long*)(cp) = r->r15; cp+=8;
