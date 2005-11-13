@@ -1,11 +1,11 @@
 CryoPID was written by Bernard Blackham with assistance from several fantastic
 folks:
 
- Original 64-bit lseek code
-  - Cameron Patrick
- 
- GTK library runtime linking
+ Gtk+ library runtime linking
   - Andrew Griffiths
   - Ben Hawkes
- 
 
+ Support and encouragement
+  - Cameron Patrick
+  - Davyd Madeley
+  - Michael Natterer
