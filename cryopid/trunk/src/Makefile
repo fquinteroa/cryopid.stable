@@ -4,7 +4,7 @@ USE_GTK=y
 
 ARCH=$(shell arch)
 
-CFLAGS = -g -Wall -O2 -I. -Iarch -D__$(ARCH)__
+CFLAGS = -g -Wall -Os -I. -Iarch -D__$(ARCH)__
 
 # Set arch-specific settings
 ifneq ($(filter i%86,$(ARCH)), )
