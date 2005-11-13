@@ -37,8 +37,8 @@ void read_chunk_sighand(void *fptr, int action)
 	else
 #endif
 	{
-	    syscall_check(rt_sigaction(sig_num, &ksa, NULL, sizeof(arch_sigset_t)), 0,
-		    "set_rt_action(%d, ksa, NULL)", sig_num);
+	    syscall_check(cp_sigaction(sig_num, &ksa, NULL, sizeof(arch_sigset_t)), 0,
+		    "cp_sigaction(%d, ksa, NULL)", sig_num);
 	}
     }
 }
