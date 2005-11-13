@@ -41,6 +41,8 @@ static inline unsigned long get_task_size()
     return (unsigned long)((((unsigned long)&stack_var + GB)/GB)*GB);
 }
 
+#define cp_sigaction rt_sigaction
+
 #define __NR_sys_clone __NR_clone
 static inline _syscall2(int, sys_clone, int, flags, void*, child_stack);
 
