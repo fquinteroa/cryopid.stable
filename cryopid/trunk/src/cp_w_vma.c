@@ -213,13 +213,19 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    !(vma->flags & MAP_SHARED) &&
 	    (vma->prot & (PROT_READ|PROT_EXEC))) {
 	char *p, *end;
-	end = ((char*)vma->data) + vma->length - sizeof(long) + 1;
-	for (p = (char*)vma->data; p < end; p++) {
+	p = (char*)vma->data;
+	end = p + vma->length - sizeof(long) + 1;
+	while (p < end) {
 	    if (is_a_syscall(*(long*)p, 1)) {
 		syscall_loc = vma->start + (p - (char*)vma->data);
 		debug("[+] Found a syscall location at 0x%lx", syscall_loc);
 		break;
 	    }
+#ifdef ARCH_HAS_ALIGNED_INSTRUCTIONS
+	    p += sizeof(long);
+#else
+	    p++;
+#endif
 	}
     }
 
