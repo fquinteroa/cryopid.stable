@@ -5,7 +5,6 @@
 #include <sys/un.h>
 #include <linux/types.h>
 #include <netinet/in.h>
-#include <linux/user.h>
 #include <linux/unistd.h>
 #include <linux/termios.h>
 #include <signal.h>

@@ -2,7 +2,6 @@
 #define _PROCESS_H_
 
 #include <sys/types.h>
-#include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <linux/types.h>
 

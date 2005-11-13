@@ -1,7 +1,5 @@
-#include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <linux/user.h>
 #include <errno.h>
 #include <string.h>
 #include <dirent.h>

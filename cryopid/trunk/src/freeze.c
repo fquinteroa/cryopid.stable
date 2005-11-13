@@ -7,8 +7,6 @@
 
 
 #include <sys/types.h>
-#include <linux/user.h>
-#include <sys/ptrace.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <string.h>

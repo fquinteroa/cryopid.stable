@@ -15,9 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <linux/user.h>
 #include <linux/net.h>
-#include <sys/ptrace.h>
 
 #include "linux/tcpcp.h"
 

@@ -42,4 +42,6 @@ static inline int cp_sigaction(int sig, const struct k_sigaction* ksa,
 #define HIB(x) (((x) >> 10) & 0x003fffff)
 #define LOB(x) ((x) & 0x3ff)
 
+#define ptrace __ptrace
+
 #endif /* _ARCH_H_ */

@@ -1,4 +1,3 @@
-#include <sys/ptrace.h>
 
 #include "cryopid.h"
 #include "process.h"

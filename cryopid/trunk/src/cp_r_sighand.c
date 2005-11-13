@@ -1,7 +1,5 @@
 #include <bits/types.h>
 #include <linux/unistd.h>
-#include <linux/user.h>
-#include <sys/ptrace.h>
 #include <signal.h>
 #include <errno.h>
 #include <string.h>

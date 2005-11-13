@@ -1,9 +1,7 @@
 #include <bits/types.h>
-#include <linux/user.h>
 #include <linux/kdev_t.h>
 #include <sys/mman.h>
 #include <string.h>
-#include <sys/ptrace.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>

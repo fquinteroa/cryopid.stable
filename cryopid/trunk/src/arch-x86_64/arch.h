@@ -26,6 +26,7 @@ extern int r_arch_prctl(pid_t pid, int code, unsigned long addr);
 
 extern unsigned long get_task_size();
 
+#define ptrace __ptrace
 #define cp_sigaction rt_sigaction
 
 #endif /* _ARCH_H_ */
