@@ -60,6 +60,7 @@ struct cp_misc {
 
 struct cp_regs {
     struct user *user_data;
+    void *opaque; /* For arch-specific data */
     int stopped;
 };
 
