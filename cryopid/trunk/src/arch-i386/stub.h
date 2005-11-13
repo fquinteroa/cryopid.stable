@@ -2,6 +2,7 @@
 #define _STUB_H_
 
 #include <sys/mman.h>
+#include <asm/page.h>
 #include "cryopid.h"
 
 static inline void jump_to_trampoline()

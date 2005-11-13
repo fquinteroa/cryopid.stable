@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <linux/net.h>
+#include <asm/page.h>
 
 #include "cryopid.h"
 #include "cpimage.h"

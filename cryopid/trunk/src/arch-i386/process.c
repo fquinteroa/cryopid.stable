@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <linux/net.h>
+#include <asm/page.h>
+#include <asm/user.h>
 
 #include "linux/tcpcp.h"
 

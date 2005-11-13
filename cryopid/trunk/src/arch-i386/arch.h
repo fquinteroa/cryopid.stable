@@ -42,7 +42,6 @@ static inline unsigned long get_task_size()
 }
 
 #define cp_sigaction rt_sigaction
-#define ptrace __ptrace
 
 #define __NR_sys_clone __NR_clone
 static inline _syscall2(int, sys_clone, int, flags, void*, child_stack);

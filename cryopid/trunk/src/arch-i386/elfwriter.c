@@ -1,4 +1,5 @@
 #include <elf.h>
+#include <asm/page.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
