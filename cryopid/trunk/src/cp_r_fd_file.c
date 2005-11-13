@@ -14,11 +14,24 @@
 void restore_fd_file(struct cp_fd *fd, int action)
 {
     int ffd;
-    ffd = open(fd->file.filename, fd->mode);
-    if (ffd == -1) {
-	fprintf(stderr, "no longer exists! ");
-	return;
+
+    if (fd->file.deleted && fd->file.contents) {
+	char fn[] = "/tmp/cryopid.tmp.XXXXXX";
+	ffd = mkstemp(fn);
+	if (ffd == -1) {
+	    fprintf(stderr, "could not recreate temporary file! ");
+	    return;
+	  }
+	unlink(fn);
+	write(ffd, fd->file.contents, fd->file.size);
+    } else {
+	ffd = open(fd->file.filename, fd->mode);
+	if (ffd == -1) {
+	    fprintf(stderr, "no longer exists! ");
+	    return;
+	}
     }
+
     if (ffd != fd->fd) {
 	dup2(ffd, fd->fd);
 	close(ffd);
@@ -28,6 +41,7 @@ void restore_fd_file(struct cp_fd *fd, int action)
 void read_chunk_fd_file(void *fptr, struct cp_fd *fd, int action)
 {
     fd->file.filename = read_string(fptr, NULL, 0);
+    read_bit(fptr, &fd->file.deleted, sizeof(int));
     read_bit(fptr, &fd->file.size, sizeof(int));
     if (fd->file.size) {
 	fd->file.contents = xmalloc(fd->file.size);
@@ -36,7 +50,7 @@ void read_chunk_fd_file(void *fptr, struct cp_fd *fd, int action)
 	fd->file.contents = NULL;
 
     if (action & ACTION_PRINT)
-	fprintf(stderr, "%s ", fd->file.filename);
+	fprintf(stderr, "%s%s ", fd->file.filename, fd->file.deleted?" [deleted]":"");
 
     if (action & ACTION_LOAD)
 	restore_fd_file(fd, action);

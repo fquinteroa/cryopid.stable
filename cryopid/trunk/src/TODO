@@ -50,9 +50,11 @@ File descriptors:
 - tcpcpd to firewall TCP connections when being migrated
 - UDP sockets
 + Unix sockets
++ FIFOs to self
+- FIFOs to other processes
 - sound devices (ALSA & OSS)
 - large file support
-- deleted files (scrape out and regenerate)
++ deleted files (scrape out and regenerate)
 - interactive prompting for file seek offsets and restoration
 
 VMAs:
@@ -96,5 +98,5 @@ Compression:
 
 
 Graphics:
-- Gtk hooks
-- Fix Gdk
++ Gtk hooks
+* Fix Gdk

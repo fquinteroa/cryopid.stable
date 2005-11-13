@@ -36,6 +36,7 @@ void set_syscall_return(struct user* user, unsigned long val);
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
 int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
 
+extern ssize_t r_read(pid_t pid, int fd, void* buf, size_t count);
 extern off_t r_lseek(pid_t pid, int fd, off_t offset, int whence);
 extern int r_fcntl(pid_t pid, int fd, int cmd);
 extern int r_mprotect(pid_t pid, void *start, size_t len, int flags);

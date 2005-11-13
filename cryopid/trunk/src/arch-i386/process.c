@@ -337,6 +337,26 @@ static inline unsigned long __remote_syscall(pid_t pid,
 		1, (unsigned long)arg5) \
     }
 
+__rsyscall3(off_t, read, int, fd, void*, buf, size_t, count);
+ssize_t r_read(pid_t pid, int fd, void* buf, size_t count)
+{
+    int off;
+    off = 0;
+    while (count > 0) {
+	int amt = PAGE_SIZE; /* must be less than size of scribble zone */
+	int err;
+	if (count < amt)
+	    amt = count;
+	err = __r_read(pid, fd, (void*)scribble_zone, amt);
+	if (err <= 0)
+	    return err;
+	memcpy_from_target(pid, (char*)buf + off, (void*)scribble_zone, err);
+	off += err;
+	count -= err;
+    }
+    return off;
+}
+
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
 off_t r_lseek(pid_t pid, int fd, off_t offset, int whence)
 {
