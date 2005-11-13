@@ -15,6 +15,7 @@ endif
 ifeq ($(ARCH), x86_64)
 ARCH_OFORMAT=elf64-x86-64
 LD_FORMAT=elf_x86_64
+USE_TCPCP=n
 endif
 ifeq ($(ARCH), sparc)
 ARCH_OFORMAT=elf32-sparc
@@ -22,10 +23,10 @@ LD_FORMAT=elf32_sparc
 USE_TCPCP=n
 CFLAGS += -DARCH_HAS_ALIGNED_INSTRUCTIONS
 endif
-
 ifeq ($(ARCH), alpha)
 ARCH_OFORMAT=elf64-alpha
-LD_OFORMAT=elf64alpha
+LD_FORMAT=elf64alpha
+USE_TCPCP=n
 endif
 
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_header.o arch/arch_r_objs.o fork2.o
