@@ -14,3 +14,5 @@ _start:
 	or	%o3, %lo(environ), %o3
 	st	%o2, [%o3]
 	call	main
+	nop
+	ret

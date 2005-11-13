@@ -1,7 +1,7 @@
 #ifndef _CPLAYOUT_H_
 #define _CPLAYOUT_H_
 
-#define TRAMPOLINE_ADDR		0x00001000
+#define TRAMPOLINE_ADDR		0x00000000
 
 #define RESUMER_START	0x40000000 /* Lowest location resumer will be at */
 #define RESUMER_END	0x40300000 /* Highest location resumer will be at */

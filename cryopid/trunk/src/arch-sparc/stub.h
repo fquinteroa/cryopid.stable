@@ -7,7 +7,11 @@
 
 static inline void jump_to_trampoline()
 {
-    // FIXME asm("jmp *%%rax\n" : : "a"(TRAMPOLINE_ADDR));
+    asm volatile (
+	    "sethi %hi(0x00000000), %o7 ; \n" // FIXME: use TRAMPOLINE_ADDR
+	    "jmpl %o7, %g0 ; \n"
+	    "nop ; \n"
+	    );
 }
 
 static inline void* find_top_of_stack()

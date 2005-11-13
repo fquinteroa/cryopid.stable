@@ -96,27 +96,32 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
     return 1;
 }
 
-static int save_registers(pid_t pid, struct pt_regs *r)
+static int save_registers(pid_t pid, struct regs *r)
 {
-    if (ptrace(PTRACE_GETREGS, pid, NULL, r) < 0) {
+    if (ptrace(PTRACE_GETREGS, pid, r, NULL) < 0) {
 	perror("ptrace getregs");
-	return errno;
+	return -errno;
     }
     return 0;
 }
 
-static int restore_registers(pid_t pid, struct pt_regs *r)
+static int restore_registers(pid_t pid, struct regs *r)
 {
-    if (ptrace(PTRACE_SETREGS, pid, NULL, r) < 0) {
+    if (ptrace(PTRACE_SETREGS, pid, r, NULL) < 0) {
 	perror("ptrace setregs");
-	return errno;
+	return -errno;
     }
     return 0;
+}
+
+int is_a_nop(unsigned long inst, int canonical)
+{
+    return inst == 0x01000000;
 }
 
 int is_a_syscall(unsigned long inst, int canonical)
 {
-    if (inst == 0x1020d091)
+    if (inst == 0x91d02010)
 	return 1;
     return 0;
 }
@@ -124,7 +129,8 @@ int is_a_syscall(unsigned long inst, int canonical)
 int is_in_syscall(pid_t pid, struct user *user)
 {
     long inst;
-    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.pc-4, 0);
+    /* FIXME npc or pc? see esky? */
+    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.npc-4, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
@@ -133,7 +139,8 @@ int is_in_syscall(pid_t pid, struct user *user)
 }
 
 void set_syscall_return(struct user* user, unsigned long val) {
-    user->regs.regs[0] = val;
+    /* FIXME - set carry bit on error */
+    user->regs.regs[7] = val;
 }
 
 static int process_is_stopped(pid_t pid)
@@ -190,7 +197,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 {
     int success = 0;
     char* pagebackup;
-    struct pt_regs r;
+    struct regs r;
 
     start_ptrace(pid);
 
@@ -198,6 +205,9 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 	fprintf(stderr, "Unable to save process's registers!\n");
 	goto out_ptrace;
     }
+
+    extern unsigned long mysp;
+    mysp = r.r_o6;
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
@@ -208,19 +218,22 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 
     if (!scribble_zone) {
 	fprintf(stderr, "[-] No suitable scribble zone could be found. Aborting.\n");
-	goto out_ptrace;
+	goto out_ptrace_regs;
     }
+
     pagebackup = backup_page(pid, (void*)scribble_zone);
 
     fetch_chunks_fd(pid, flags, process_image);
-
-    fetch_chunks_sighand(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
+    fetch_chunks_sighand(pid, flags, process_image);
 
     success = 1;
 
     restore_page(pid, (void*)scribble_zone, pagebackup);
+
+out_ptrace_regs:
     restore_registers(pid, &r);
+
 out_ptrace:
     end_ptrace(pid);
     
@@ -234,9 +247,9 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	int use_o1, unsigned long o1,
 	int use_o2, unsigned long o2,
 	int use_o3, unsigned long o3,
-	int use_o4 , unsigned long o4 )
+	int use_o4, unsigned long o4)
 {
-    struct pt_regs orig_regs, regs;
+    struct regs orig_regs, regs;
     unsigned long ret;
     int status;
 
@@ -250,21 +263,32 @@ static inline unsigned long __remote_syscall(pid_t pid,
 
     memcpy(&regs, &orig_regs, sizeof(regs));
 
-    regs.u_regs[UREG_G1] = syscall_no;
-    if (use_o0) regs.u_regs[UREG_I0] = o0;
-    if (use_o1) regs.u_regs[UREG_I1] = o1;
-    if (use_o2) regs.u_regs[UREG_I2] = o2;
-    if (use_o3) regs.u_regs[UREG_I3] = o3;
-    if (use_o4) regs.u_regs[UREG_I4] = o4;
+    regs.r_g1 = syscall_no;
+    if (use_o0) regs.r_o0 = o0;
+    if (use_o1) regs.r_o1 = o1;
+    if (use_o2) regs.r_o2 = o2;
+    if (use_o3) regs.r_o3 = o3;
+    if (use_o4) regs.r_o4 = o4;
 
     /* Set up registers for ptrace syscall */
-    regs.pc = syscall_loc;
+    regs.r_pc = syscall_loc;
+    regs.r_npc = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
-    /* Execute call */
-    if (ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) {
-	perror("ptrace singlestep");
+    printf("Regs at 0x%lx/0x%lx are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
+	    regs.r_pc, 
+	    regs.r_npc, 
+	    regs.r_g1, 
+	    regs.r_o0, 
+	    regs.r_o1, 
+	    regs.r_o2, 
+	    regs.r_o3);
+    /* Execute call - there's no PTRACE_SINGLESTEP on sparc. Instead use
+     * PTRACE_SYSCALL
+     */
+    if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
+	perror("ptrace syscall");
 	abort();
     }
     ret = waitpid(pid, &status, 0);
@@ -272,6 +296,42 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	perror("Failed to wait for child");
 	abort();
     }
+    printf("waited and got SIG %d\n", WSTOPSIG(status));
+    if (WSTOPSIG(status) != SIGTRAP) {
+	struct regs new_regs;
+	save_registers(pid, &new_regs);
+	printf("Interrupted at 0x%lx/0x%lx Mid regs are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
+		new_regs.r_pc,
+		new_regs.r_npc,
+		new_regs.r_g1,
+		new_regs.r_o0,
+		new_regs.r_o1,
+		new_regs.r_o2,
+		new_regs.r_o3);
+	/* do it again */
+	restore_registers(pid, &regs);
+	if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
+	    perror("ptrace syscall");
+	    abort();
+	}
+	ret = waitpid(pid, &status, 0);
+	if (ret == -1) {
+	    perror("Failed to wait for child");
+	    abort();
+	}
+	printf("waited again got SIG %d\n", WSTOPSIG(status));
+    }
+
+    if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
+	perror("ptrace syscall");
+	abort();
+    }
+    ret = waitpid(pid, &status, 0);
+    if (ret == -1) {
+	perror("Failed to wait for child");
+	abort();
+    }
+    printf("waited and got SIG %d\n", WSTOPSIG(status));
 
     /* Get our new registers */
     if (save_registers(pid, &regs) < 0)
@@ -281,12 +341,16 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if ((signed long)regs.u_regs[UREG_I0] < 0) {
-	errno = -regs.u_regs[UREG_I0];
+    if (regs.r_psr & PSR_C) { /* error */
+	errno = regs.r_o0;
+	fprintf(stderr, "syscall %s returns error %s\n", syscall_name, strerror(errno));
+	errno = regs.r_o0;
 	return -1;
     }
 
-    return regs.u_regs[UREG_I0];
+    errno = 0;
+    fprintf(stderr, "syscall %s returns %d\n", syscall_name, regs.r_o0);
+    return regs.r_o0;
 }
 
 #define __rsyscall0(type,name) \
@@ -357,14 +421,14 @@ int r_mprotect(pid_t pid, void* start, size_t len, int flags)
     return __r_mprotect(pid, start, len, flags);
 }
 
-__rsyscall4(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, size_t, masksz);
+__rsyscall5(int, rt_sigaction, int, sig, struct k_sigaction*, ksa, struct k_sigaction*, oksa, void*, restorer, size_t, masksz);
 int r_rt_sigaction(pid_t pid, int sig, struct k_sigaction *ksa, struct k_sigaction *oksa, size_t masksz)
 {
     int ret;
     if (ksa)
 	memcpy_into_target(pid, (void*)(scribble_zone+0x100), ksa, sizeof(*ksa));
     ret = __r_rt_sigaction(pid, sig, ksa?(void*)(scribble_zone+0x100):NULL,
-	    oksa?(void*)(scribble_zone+0x100+sizeof(*ksa)):NULL, masksz);
+	    oksa?(void*)(scribble_zone+0x100+sizeof(*ksa)):NULL, NULL, masksz);
     if (oksa)
 	memcpy_from_target(pid, oksa, (void*)(scribble_zone+0x100+sizeof(*ksa)), sizeof(*oksa));
 
