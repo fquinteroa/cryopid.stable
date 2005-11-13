@@ -197,8 +197,10 @@ int main(int argc, char**argv, char **envp)
     for(i = 0; envp[i]; i++) {
 	*real_environ++ = strdup(envp[i]);
 #ifdef USE_GTK
-	if (strncmp(envp[i], "DISPLAY=", 8) == 0)
-	    strcpy(display_environ, envp[i]+8);
+	if (strncmp(envp[i], "DISPLAY=", 8) == 0) {
+	    strncpy(display_environ, envp[i]+8, sizeof(display_environ)-1);
+	    display_environ[sizeof(display_environ)-1] = '\0';
+	}
 #endif
     }
     *real_environ = NULL;
