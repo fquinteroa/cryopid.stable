@@ -1,5 +1,5 @@
 COMMON_OBJS = 
-R_CHUNK_OBJS = cp_r_regs.o cp_r_tls.o cp_r_i387.o start.o
+R_CHUNK_OBJS = cp_r_regs.o cp_r_tls.o cp_r_i387.o start.o plt-resolve.o
 W_CHUNK_OBJS = cp_w_regs.o cp_w_tls.o cp_w_i387.o
 override CFLAGS += -g -Wall -Os -fpic -I. -I..
 
