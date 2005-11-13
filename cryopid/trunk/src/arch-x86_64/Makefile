@@ -1,7 +1,7 @@
 COMMON_OBJS = common.o get_task_size.o
 R_CHUNK_OBJS = cp_r_regs.o start.o
 W_CHUNK_OBJS = cp_w_regs.o
-CFLAGS = -g -Wall -Os -fpic -I. -I..
+override CFLAGS += -g -Wall -Os -fpic -I. -I..
 
 all: arch_r_objs.o arch_w_objs.o
 
