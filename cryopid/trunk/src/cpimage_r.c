@@ -104,6 +104,8 @@ int read_chunk(void *fptr, int action)
 	    break;
 #endif
 	case CP_CHUNK_FINAL:
+	    if (action & ACTION_PRINT)
+		fprintf(stderr, "End of process image.\n");
 	    return 0;
 	default:
 	    bail("Unknown chunk type read (0x%x)", type)

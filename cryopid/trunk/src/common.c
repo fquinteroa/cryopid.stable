@@ -107,6 +107,11 @@ void *xmalloc(int len)
     return p;
 }
 
+void xfree(void *p)
+{
+    free(p);
+}
+
 unsigned int checksum(char *ptr, int len, unsigned int start)
 {
     int sum = start, i;

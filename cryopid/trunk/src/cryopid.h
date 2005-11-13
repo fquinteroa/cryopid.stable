@@ -37,6 +37,7 @@ void write_stub(int fd, long offset);
 long syscall_check(int retval, int can_be_fake, char* desc, ...);
 void safe_read(int fd, void* dest, size_t count, char* desc);
 void *xmalloc(int len);
+void xfree(void* p);
 unsigned int checksum(char *ptr, int len, unsigned int start);
 
 /* writer_raw.c */

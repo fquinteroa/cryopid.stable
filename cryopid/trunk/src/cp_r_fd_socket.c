@@ -85,6 +85,7 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
     if (action & ACTION_LOAD) {
 #ifdef USE_GTK
 	if (xsocket) {
+	    extern int need_gtk;
 	    int sp[2];
 	    socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
 	    s = sp[1];
@@ -94,6 +95,7 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
 		x_responder(sp[0]);
 	    } else
 		close(sp[0]);
+	    need_gtk = 1;
 	}
 	else
 #endif

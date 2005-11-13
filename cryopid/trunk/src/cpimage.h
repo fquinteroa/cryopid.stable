@@ -99,6 +99,7 @@ struct cp_console {
 struct cp_file {
     char *filename;
     char *contents;
+    int deleted;
     int size;
 };
 
