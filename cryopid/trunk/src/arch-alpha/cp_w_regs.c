@@ -26,7 +26,7 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     }
 
     for (pos = 0; pos < sizeof(user_data->regs)/sizeof(user_data->regs[0]); pos++)
-	printf("Reg %d: 0x%lx\n", pos, user_data->regs[pos]);
+	printf("Reg %ld: 0x%lx\n", pos, user_data->regs[pos]);
 
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, user_data)) {

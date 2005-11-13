@@ -40,4 +40,6 @@ static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, 
 
 static inline unsigned long get_task_size() { return 0x40000000000UL; }
 
+#define cp_sigaction rt_sigaction
+
 #endif /* _ARCH_H_ */
