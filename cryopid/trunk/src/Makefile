@@ -4,17 +4,23 @@ USE_GTK=y
 
 ARCH=$(shell arch)
 
+CFLAGS = -g -Wall -O2 -I. -Iarch -D__$(ARCH)__
+
+# Set arch-specific settings
 ifneq ($(filter i%86,$(ARCH)), )
 ARCH=i386
 ARCH_OFORMAT=elf32-i386
+LD_FORMAT=elf_i386
 endif
-
 ifeq ($(ARCH), x86_64)
 ARCH_OFORMAT=elf64-x86-64
+LD_FORMAT=elf_x86_64
 endif
-
 ifeq ($(ARCH), sparc)
 ARCH_OFORMAT=elf32-sparc
+LD_FORMAT=elf32_sparc
+USE_TCPCP=n
+CFLAGS += -DARCH_HAS_ALIGNED_INSTRUCTIONS
 endif
 
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_header.o arch/arch_r_objs.o fork2.o
@@ -24,21 +30,18 @@ STUB_TYPES = gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
 TARGETS = freeze fork2_helper
 
-CFLAGS = -Wall -Os -I. -Iarch -D__$(ARCH)__
-
-CHPAX = /sbin/chpax
-DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
-
-# Switch the commenting on the following lines if we suspect wacky uclibc bugs
+# How do we get our libc linked into the stub?
 LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a -lgcc
 #LIBC = -nostdlib -nostartfiles -lc
 
+# Compile in tcpcp if wanted/needed
 ifeq ($(USE_TCPCP),y)
 R_CHUNK_OBJS += tcpcp_r.o 
 W_CHUNK_OBJS += tcpcp_w.o 
 DEFINES += -DUSE_TCPCP
 endif
 
+# Compile in Gtk+ support if wanted
 ifeq ($(USE_GTK),y)
 R_CHUNK_OBJS += gtk_support.o
 DEFINES += -DUSE_GTK
@@ -46,6 +49,11 @@ endif
 
 CFLAGS += $(DEFINES)
 
+# Utilities
+CHPAX = /sbin/chpax
+DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
+
+# Targets
 all: arch $(TARGETS)
 
 arch:
@@ -58,7 +66,7 @@ clean:
 
 stub-image-%.o: stub-%
 	@echo Generating binary object of $^
-	@$(LD) -m elf_$(ARCH) --format binary --oformat $(ARCH_OFORMAT) -r $< -o $@
+	@$(LD) -m $(LD_FORMAT) --format binary --oformat $(ARCH_OFORMAT) -r $< -o $@
 
 stub-%: stub_common.o $(COMMON_OBJS) $(R_CHUNK_OBJS) writer_%.c
 	@echo Linking $@
