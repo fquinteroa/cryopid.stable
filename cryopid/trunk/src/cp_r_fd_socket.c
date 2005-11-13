@@ -53,7 +53,10 @@ static void read_chunk_fd_socket_unix(void *fptr, int fd,
 	struct cp_socket_unix *fu, int action)
 {
     struct cp_socket_unix u;
-    int s, xsocket;
+    int s;
+#ifdef USE_GTK
+    int xsocket;
+#endif
 
     if (action & ACTION_PRINT)
 	fprintf(stderr, "UNIX socket ");
