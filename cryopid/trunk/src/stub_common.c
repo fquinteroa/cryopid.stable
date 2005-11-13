@@ -16,10 +16,10 @@ extern char tramp[] __attribute__((__section__((".tramp"))));
 static int image_fd, real_fd;
 
 int verbosity = 0;
-int do_pause = 0;
+int dump_only = 0;
+int action = ACTION_LOAD;
 int want_pid = 0;
-int translate_pids = 0;
-char ignorefds[256];
+int do_pause = 0;
 int reforked = 0;
 
 int real_argc;
@@ -39,7 +39,7 @@ static void read_process()
 	bail("Unable to initialize reader.");
 
     /* Read and process all chunks. */
-    while (read_chunk(fptr, ACTION_LOAD | ((verbosity>0)?ACTION_PRINT:0)));
+    while (read_chunk(fptr, action));
 
     /* Cleanup the input file. */
     stream_ops->finish(fptr);
@@ -48,6 +48,9 @@ static void read_process()
     /* The trampoline code should now be magically loaded at 0x10000.
      * Jumping there will restore registers and continue execution.
      */
+
+    if (!(action & ACTION_LOAD))
+	exit(0);
 
     if (do_pause)
 	sleep(2);
@@ -73,19 +76,17 @@ void usage(char* argv0)
     fprintf(stderr,
 "Usage: %s [options]\n"
 "\n"
-"This is a saved image of process. To resume this process, you can simply run\n"
-"this executable. Some options that may be of interest when restoring\n"
+"This is a saved image of a process. To resume this process, you can simply\n"
+"run this executable. Some options that may be of interest when restoring\n"
 "this process:\n"
 "\n"
+"    -d      Describe contents of file without actually restoring.\n"
 "    -v      Be verbose while resuming.\n"
-"    -i <fd> Do not restore the given file descriptor.\n"
 "    -p      Pause between steps before resuming (for debugging)\n"
 "    -P      Attempt to gain original PID by way of fork()'ing a lot\n"
-"    -t      Use ptrace to translate PIDs in system calls (Experimental and\n"
-"	    incomplete!)"
 "\n"
-"This image was created by CryoPID. http://cryopid.berlios.de/\n",
-    argv0);
+"This image was created by CryoPID %s. http://cryopid.berlios.de/\n",
+    argv0, CRYOPID_VERSION);
     exit(1);
 }
 
@@ -119,7 +120,6 @@ void real_main(int argc, char** argv)
     }
 
     /* Parse options */
-    memset(ignorefds, 0, sizeof(ignorefds));
     while (1) {
 	int option_index = 0;
 	int c;
@@ -127,13 +127,18 @@ void real_main(int argc, char** argv)
 	    {0, 0, 0, 0},
 	};
 	
-	c = getopt_long(argc, argv, "vpPc:ti:",
+	c = getopt_long(argc, argv, "dvpP",
 		long_options, &option_index);
 	if (c == -1)
 	    break;
 	switch(c) {
+	    case 'd':
+		action &= ~ACTION_LOAD;
+		action |= ACTION_PRINT;
+		break;
 	    case 'v':
 		verbosity++;
+		action |= ACTION_PRINT;
 		break;
 	    case 'p':
 		do_pause = 1;
@@ -141,19 +146,8 @@ void real_main(int argc, char** argv)
 	    case 'P':
 		want_pid = 1;
 		break;
-	    case 't':
-		translate_pids = 1;
-		break;
-	    case 'i':
-		if (atoi(optarg) >= 256) {
-		    fprintf(stderr, "Ignored fd number too high! Not ignoring.\n");
-		    exit(1);
-		}
-		ignorefds[atoi(optarg)] = 1;
-		break;
 	    case '?':
 		/* invalid option */
-		fprintf(stderr, "Unknown option on command line.\n");
 		usage(argv[0]);
 		break;
 	}
