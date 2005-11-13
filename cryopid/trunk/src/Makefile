@@ -23,6 +23,11 @@ USE_TCPCP=n
 CFLAGS += -DARCH_HAS_ALIGNED_INSTRUCTIONS
 endif
 
+ifeq ($(ARCH), alpha)
+ARCH_OFORMAT=elf64-alpha
+LD_OFORMAT=elf64alpha
+endif
+
 R_CHUNK_OBJS = cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_header.o arch/arch_r_objs.o fork2.o
 W_CHUNK_OBJS = cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_fifo.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o cp_w_header.o arch/arch_w_objs.o list.o 
 COMMON_OBJS = common.c arch/asmfuncs.o
