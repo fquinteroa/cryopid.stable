@@ -1,9 +1,9 @@
-Legend:
+--- Legend:
  [-] not yet done
  [+] done
  [*] in progress
 
-General:
+--- General:
 + Cleanup read vs load.
 - Cleanup static functions.
 - Cleanup header usage.
@@ -18,7 +18,7 @@ General:
 + Figure a sane way of building & linking against uclibc or dietlibc.
 - Implement make-static cleanly.
 
-Misc:
+--- Misc:
 - Environment
 - Command line
   If randomize_va_space = 0, then we should be able to reconstruct the
@@ -26,19 +26,19 @@ Misc:
   Otherwise, if we're probably screwed.
 - Working directory
 
-Registers:
+--- Registers:
 + regs
 + fail syscalls in progress with EINTR (are there any we should restart?)
 + restore after getting image
 
-FPU:
+--- FPU:
 - i387 state
 
-TLS:
+--- TLS:
 + TLS segments
 + tls hack for porting 2.6 processes to 2.4
 
-File descriptors:
+--- File descriptors:
 + files
 - file contents
 + fcntl state - blocking & close_on_exec
@@ -57,7 +57,7 @@ File descriptors:
 + deleted files (scrape out and regenerate)
 - interactive prompting for file seek offsets and restoration
 
-VMAs:
+--- VMAs:
 + memory segments
 + un-mprotect unreadable segments so they can be scraped.
 - detect EIO and claim VM_IO, so just mmap it on other side.
@@ -66,19 +66,19 @@ VMAs:
 - Allow turning checksums off for speed.
 + mmap existing libraries if available, even if in image, to save on memory
 
-Signal Handlers:
+--- Signal Handlers:
 + sighands
 - process signal masks (blocked, ignored)
 + stopped state
 - restart alarms
 - SIGWINCH me
 
-IPC:
+--- IPC:
 - shared memory
 - semaphores
 - message queues
 
-Threads:
+--- Threads:
 - Identify common:
   - CLONE_PARENT
   - CLONE_FS
@@ -91,12 +91,14 @@ Threads:
 - TID
 - futexes
 
-Compression:
+--- Compression:
 + LZF
 - LZF in-place decompression
 + GZIP
 
 
-Graphics:
+--- Graphics:
 + Gtk hooks
 * Fix Gdk
+
+vim:ft=diff
