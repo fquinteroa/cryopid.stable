@@ -63,7 +63,7 @@ CHPAX = /sbin/chpax
 DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 
 # Targets
-all: arch $(TARGETS)
+all: arch $(TARGETS) $(COMMON_OBJS) $(R_CHUNK_OBJS) $(W_CHUNK_OBJS)
 
 arch:
 	! test -h arch && rm -f arch && ln -s arch-$(ARCH) arch || true
