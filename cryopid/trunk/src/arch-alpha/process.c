@@ -134,16 +134,16 @@ static int restore_registers(pid_t pid, struct registers *r)
     return 0;
 }
 
-int is_a_syscall(unsigned long inst, int canonical)
+int is_a_syscall(unsigned int inst, int canonical)
 {
-    if (inst == 0x1020d091)
+    if (inst == 0x00000083)
 	return 1;
     return 0;
 }
 
 int is_in_syscall(pid_t pid, struct user *user)
 {
-    long inst;
+    int inst;
     errno = 0;
     inst = ptrace(PTRACE_PEEKDATA, pid, user->regs[EF_PC], 0);
     if (errno) {

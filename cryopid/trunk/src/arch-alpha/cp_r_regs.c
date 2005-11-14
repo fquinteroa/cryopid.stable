@@ -9,7 +9,8 @@
 
 static void load_chunk_regs(struct user *user, int stopped)
 {
-    char *cp, *code = (char*)TRAMPOLINE_ADDR;
+    int *cp, *code = (int*)TRAMPOLINE_ADDR;
+    long *data;
 
     /* Create region for mini-resumer process. */
     syscall_check(
@@ -17,42 +18,30 @@ static void load_chunk_regs(struct user *user, int stopped)
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
     cp = code;
+    data = (long*)(code + (PAGE_SIZE >> 4)); /* PAGE_SIZE/2 in longs */
 
     /* put return dest onto stack too */
     //r->r_o6-=8;
     //*(long*)r->r_o6 = r->r_pc;
 
-    code[0xffc] = 'A';
-    /* set up a temporary stack for use */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc4;
-    *(int*)(cp) = ((long)code&0xffffffff)+0x0ff0; cp+=4; /* mov 0x11000, %rsp */
-
     /* munmap our custom malloc space */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
-    *(int*)(cp) = __NR_munmap; cp+=4; /* mov foo, %rax */
-    *cp++=0x48; *cp++=0xbf;
-    *(long*)(cp) = MALLOC_START; cp+=8; /* mov foo, %rdi  */
-    *cp++=0x48; *cp++=0xbe;
-    *(long*)(cp) = MALLOC_END-MALLOC_START; cp+=8; /* mov foo, %rsi  */
-    *cp++=0x0f;*cp++=0x05; /* syscall */
+    *++data=__NR_munmap;             *cp++=0xa41f0000|(long)data; /* mov thing, $0 */
+    *++data=MALLOC_START;            *cp++=0xa61f0000|(long)data; /* mov thing, $16 */
+    *++data=MALLOC_END-MALLOC_START; *cp++=0xa63f0000|(long)data; /* mov thing, $17 */
+    *cp++=0x83;
 
     /* munmap resumer code except for us */
-    *cp++=0x48; *cp++=0xc7; *cp++=0xc0;
-    *(int*)(cp) = __NR_munmap; cp+=4; /* mov foo, %rax  */
-    *cp++=0x48; *cp++=0xbf;
-    *(long*)(cp) = RESUMER_START; cp+=8; /* mov foo, %rdi  */
-    *cp++=0x48; *cp++=0xbe;
-    *(long*)(cp) = RESUMER_END-RESUMER_START; cp+=8; /* mov foo, %rsi  */
-    *cp++=0x0f;*cp++=0x05; /* syscall */
+    *++data=__NR_munmap;              *cp++=0xa41f0000|(long)data; /* mov thing, $0 */
+    *++data=RESUMER_START;            *cp++=0xa61f0000|(long)data; /* mov thing, $16 */
+    *++data=RESUMER_END-RESUMER_START;*cp++=0xa63f0000|(long)data; /* mov thing, $17 */
+    *cp++=0x83;
 
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {
-	*cp++=0x48; *cp++=0xc7; *cp++=0xc0;
-	*(int*)(cp) = __NR_kill; cp+=4;     /* mov $37, %eax (kill)    */
-	*cp++=0x48; *cp++=0x31; *cp++=0xff; /* xor %rdi, %rdi          */
-	*cp++=0x48; *cp++=0xc7; *cp++=0xc6;
-	*(int*)(cp) = SIGSTOP; cp+=4;       /* mov $19, %rsi (SIGSTOP) */
-	*cp++=0x0f;*cp++=0x05;              /* syscall                 */
+	*++data=__NR_kill;    *cp++=0xa41f0000|(long)data; /* mov thing, $0 */
+	*++data=0;            *cp++=0xa61f0000|(long)data; /* mov thing, $16 */
+	*++data=SIGSTOP;      *cp++=0xa63f0000|(long)data; /* mov thing, $17 */
+	*cp++=0x83;
     }
 
     /* restore registers */

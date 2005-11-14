@@ -9,7 +9,7 @@ SEARCH_DIR("/usr/alpha-linux/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/l
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = 0x2000); . = 0x2000 + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = 0x4000); . = 0x4000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) }
   .hash           : { *(.hash) }
   .dynsym         : { *(.dynsym) }

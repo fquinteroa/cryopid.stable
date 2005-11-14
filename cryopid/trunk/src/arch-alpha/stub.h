@@ -7,7 +7,7 @@
 
 static inline void jump_to_trampoline()
 {
-    // FIXME asm("jmp *%%rax\n" : : "a"(TRAMPOLINE_ADDR));
+    asm("lda $16, %0($31)\njmp $31,($16)\n" : : "i"(TRAMPOLINE_ADDR));
 }
 
 static inline void* find_top_of_stack()
