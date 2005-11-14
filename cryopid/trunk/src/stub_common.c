@@ -28,6 +28,7 @@ char** real_environ;
 extern char** environ;
 #ifdef USE_GTK
 extern char display_environ[80];
+extern char xauthority_environ[80];
 extern int gtk_can_close_displays;
 #endif
 
@@ -200,6 +201,9 @@ int main(int argc, char**argv, char **envp)
 	if (strncmp(envp[i], "DISPLAY=", 8) == 0) {
 	    strncpy(display_environ, envp[i]+8, sizeof(display_environ)-1);
 	    display_environ[sizeof(display_environ)-1] = '\0';
+	} else if (strncmp(envp[i], "XAUTHORITY=", 11) == 0) {
+	    strncpy(xauthority_environ, envp[i]+11, sizeof(xauthority_environ)-1);
+	    xauthority_environ[sizeof(xauthority_environ)-1] = '\0';
 	}
 #endif
     }

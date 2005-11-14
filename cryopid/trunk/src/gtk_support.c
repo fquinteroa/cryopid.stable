@@ -21,6 +21,7 @@
 #include "x.h"
 
 char display_environ[80];
+char xauthority_environ[80];
 int need_gtk = 0;
 int gtk_can_close_displays = 0;
 
@@ -48,6 +49,7 @@ void cryopid_migrate_gtk_windows()
     find_symbol(gdk_display_close, void, (GdkDisplay*));
     find_symbol_noprefix(gtk_window_get_type, GType, (void));
     find_symbol_noprefix(g_type_check_instance_is_a, int, (GTypeInstance*, GType));
+    find_symbol(setenv, int, (const char*, const char*, int));
 
     GList *top_levels = _gdk_window_get_toplevels();
 
@@ -62,6 +64,7 @@ void cryopid_migrate_gtk_windows()
     if (!need_moving)
 	return;
 
+    _setenv("XAUTHORITY", xauthority_environ, 1);
     GdkDisplay *old_display = _gdk_display_get_default();
     GdkDisplay *new_display = _gdk_display_open(display_environ);
     GdkDisplayManager *m = _gdk_display_manager_get();
