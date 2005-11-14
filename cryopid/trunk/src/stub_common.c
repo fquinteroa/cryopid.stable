@@ -28,6 +28,7 @@ char** real_environ;
 extern char** environ;
 #ifdef USE_GTK
 extern char display_environ[80];
+extern int gtk_can_close_displays;
 #endif
 
 static void read_process()
@@ -84,6 +85,8 @@ void usage(char* argv0)
 "    -v      Be verbose while resuming.\n"
 "    -p      Pause between steps before resuming (for debugging)\n"
 "    -P      Attempt to gain original PID by way of fork()'ing a lot\n"
+"    -g      Close Gtk+ displays. (Required to migrate a second time, but\n"
+"            requires at least Gtk+ 2.10)\n"
 "\n"
 "This image was created by CryoPID %s. http://cryopid.berlios.de/\n",
     argv0, CRYOPID_VERSION);
@@ -127,7 +130,7 @@ void real_main(int argc, char** argv)
 	    {0, 0, 0, 0},
 	};
 	
-	c = getopt_long(argc, argv, "dvpP",
+	c = getopt_long(argc, argv, "dvpPg",
 		long_options, &option_index);
 	if (c == -1)
 	    break;
@@ -145,6 +148,9 @@ void real_main(int argc, char** argv)
 		break;
 	    case 'P':
 		want_pid = 1;
+		break;
+	    case 'g':
+		gtk_can_close_displays = 1;
 		break;
 	    case '?':
 		/* invalid option */

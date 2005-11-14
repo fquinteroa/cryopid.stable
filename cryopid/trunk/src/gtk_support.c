@@ -22,6 +22,7 @@
 
 char display_environ[80];
 int need_gtk = 0;
+int gtk_can_close_displays = 0;
 
 void cryopid_migrate_gtk_windows()
 {
@@ -51,7 +52,7 @@ void cryopid_migrate_gtk_windows()
     GList *top_levels = _gdk_window_get_toplevels();
 
     int need_moving = 0;
-    static void need_moving_func(GdkWindow *w, void *nothing) {
+    void need_moving_func(GdkWindow *w, void *nothing) {
 	GtkWindow *wd;
 	_gdk_window_get_user_data(w, (void*)&wd);
 	if (GTK_IS_WINDOW(wd))
@@ -67,7 +68,7 @@ void cryopid_migrate_gtk_windows()
     _gdk_display_manager_set_default_display(m, new_display);
 
     GdkScreen *screen = _gdk_display_get_default_screen(new_display);
-    static void move_it(GdkWindow *w, GdkScreen *s) {
+    void move_it(GdkWindow *w, GdkScreen *s) {
 	GtkWindow *wd;
 	_gdk_window_get_user_data(w, (void*)&wd);
 	if (GTK_IS_WINDOW(wd))
@@ -75,7 +76,12 @@ void cryopid_migrate_gtk_windows()
     }
     _g_list_foreach(top_levels, (GFunc)move_it, (void*)screen);
     _g_list_free(top_levels);
-    _gdk_display_close(old_display);
+
+    /* We need a recent enough Gtk+ to be able to close displays without
+     * crashing (Gtk+ 2.10, or some CVS version thereof).
+     */
+    if (gtk_can_close_displays)
+	_gdk_display_close(old_display);
 }
 
 void x_responder(int fd) {
