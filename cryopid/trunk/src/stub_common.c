@@ -86,7 +86,9 @@ void usage(char* argv0)
 "    -v      Be verbose while resuming.\n"
 "    -p      Pause between steps before resuming (for debugging)\n"
 "    -P      Attempt to gain original PID by way of fork()'ing a lot\n"
+#ifdef USE_GTK
 "    -g      Close Gtk+ displays. (Required to migrate a second time, but\n"
+#endif
 "            requires at least Gtk+ 2.10)\n"
 "\n"
 "This image was created by CryoPID %s. http://cryopid.berlios.de/\n",
@@ -150,9 +152,11 @@ void real_main(int argc, char** argv)
 	    case 'P':
 		want_pid = 1;
 		break;
+#ifdef USE_GTK
 	    case 'g':
 		gtk_can_close_displays = 1;
 		break;
+#endif
 	    case '?':
 		/* invalid option */
 		usage(argv[0]);
