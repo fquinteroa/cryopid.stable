@@ -8,27 +8,6 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-#define MAX_SIGS 31
-
-/* Flags for fd_entry_t.flags */
-#define FD_IS_TERMINAL       1
-#define FD_OFFSET_NOT_SAVED  2
-#define FD_TERMIOS           4
-
-struct proc_header_t {
-    pid_t pid;
-
-    int n_children;
-    struct proc_header_t *children;
-
-    int n_pipes;
-    int *pipe_pairs; /* parent fd/child fd pipe pairs */
-};
-
-/* flags passed to get_proc_image */
-#define GET_LIBRARIES_TOO          0x01
-#define GET_OPEN_FILE_CONTENTS     0x02
-
 int is_a_syscall(unsigned long inst, int canonical);
 int is_in_syscall(pid_t pid, struct user *user);
 void set_syscall_return(struct user* user, unsigned long val);
