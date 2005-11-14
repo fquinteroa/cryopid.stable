@@ -79,8 +79,10 @@ void fetch_fd_file(pid_t pid, int flags, int fd, int inode, char *fd_path,
 	file->deleted = 1;
 	*(file->filename+bufsz-10) = '\0';
 	file->contents = xmalloc(file->size);
-	if (!scrape_contents(pid, fd, file->size, file->contents))
+	if (!scrape_contents(pid, fd, file->size, file->contents)) {
 	    xfree(file->contents);
+	    file->contents = NULL;
+	}
     }
 out:
     free(buf);
@@ -88,10 +90,12 @@ out:
 
 void write_chunk_fd_file(void *fptr, struct cp_file *file)
 {
+    int have_contents = !!(file->contents);
     write_string(fptr, file->filename);
     write_bit(fptr, &file->deleted, sizeof(int));
     write_bit(fptr, &file->size, sizeof(int));
-    if (file->size)
+    write_bit(fptr, &have_contents, sizeof(int));
+    if (file->contents)
 	write_bit(fptr, file->contents, file->size);
 }
 

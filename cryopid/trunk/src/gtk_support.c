@@ -75,7 +75,7 @@ void cryopid_migrate_gtk_windows()
     }
     _g_list_foreach(top_levels, (GFunc)move_it, (void*)screen);
     _g_list_free(top_levels);
-    //_gdk_display_close(old_display);
+    _gdk_display_close(old_display);
 }
 
 void x_responder(int fd) {

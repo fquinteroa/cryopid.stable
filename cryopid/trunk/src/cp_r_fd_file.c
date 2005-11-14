@@ -38,10 +38,12 @@ void restore_fd_file(struct cp_fd *fd, int action)
 
 void read_chunk_fd_file(void *fptr, struct cp_fd *fd, int action)
 {
+    int have_contents;
     fd->file.filename = read_string(fptr, NULL, 0);
     read_bit(fptr, &fd->file.deleted, sizeof(int));
     read_bit(fptr, &fd->file.size, sizeof(int));
-    if (fd->file.size) {
+    read_bit(fptr, &have_contents, sizeof(int));
+    if (have_contents) {
 	fd->file.contents = xmalloc(fd->file.size);
 	read_bit(fptr, fd->file.contents, fd->file.size);
     } else
