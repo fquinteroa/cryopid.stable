@@ -3,6 +3,7 @@
  * Better support for UNIX sockets
  * Rudimentary support for Gtk+ applications
  * Lots of refactoring for portability
+ * Don't depend on finding a syscall before needing a remote syscall
 
 0.5.3
  * Compile fix for older versions of binutils

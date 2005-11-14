@@ -73,7 +73,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 
     ptr1 = ptr2+1;
     if ((ptr2 = strchr(ptr1, ' ')) == NULL) {
-	fprintf(stderr, "No end of end in map line!\n");
+	fprintf(stderr, "No end of length in map line!\n");
 	return 0;
     }
     *ptr2 = '\0';
@@ -187,7 +187,12 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     if (!(vma->prot & PROT_READ)) {
 	/* we need to modify it to be readable */
 	old_vma_prot = vma->prot;
-	r_mprotect(pid, (void*)vma->start, vma->length, PROT_READ);
+	if (syscall_loc) {
+	    r_mprotect(pid, (void*)vma->start, vma->length, PROT_READ);
+	} else {
+	    /* We need to come back to this later. */
+	    return -1;
+	}
     }
 
     /* Decide if it's scribble worthy - find a nice anonymous mapping */
@@ -303,15 +308,23 @@ out:
 void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 {
     struct cp_chunk *chunk = NULL;
-    char tmp_fn[30];
-    char map_line[1024];
+    char tmp_fn[30], *ret;
+    char map_line[1024], map_line_save[1024];
+    struct list work_list; /* VMAs we need to come back to */
+    struct item *i = NULL;
     FILE *f;
     int vma_no = 0;
+
+    list_init(work_list);
 
     snprintf(tmp_fn, 30, "/proc/%d/maps", pid);
     f = fopen(tmp_fn, "r");
 
-    while (fgets(map_line, sizeof(map_line), f)) {
+    while ((ret = fgets(map_line, sizeof(map_line), f)) || i) {
+	if (!ret)
+	    strncpy(map_line, i->p, sizeof(map_line));
+	strncpy(map_line_save, map_line, sizeof(map_line_save));
+
 	if (!chunk)
 	    chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_VMA;
@@ -319,17 +332,31 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 	 * need a syscall_loc in order to do non-readable VMAs (to call
 	 * mprotect). Put these undoable segments into a list to process again
 	 */
-	if (!get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
+	switch (get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
 		    vma_no, bin_offset)) {
-	    debug("     Error parsing map: %s", map_line);
-	    continue;
+	    case 0:
+		debug("     Error parsing map: %s", map_line_save);
+		continue;
+	    case -1:
+		/* Add to todo list */
+		debug("     Can process map yet. Saving for later.");
+		list_append(&work_list, strdup(map_line_save));
+		if (!i)
+		    i = work_list.head;
+		continue;
 	}
 	vma_no++;
 	list_append(l, chunk);
 	chunk = NULL;
+
+	if (!ret)
+	    i = i->next;
     }
     if (chunk)
 	free(chunk);
+
+    /* FIXME: free work_list and strings if we're ever going to be long
+     * running. */
 
     fclose(f);
 }
