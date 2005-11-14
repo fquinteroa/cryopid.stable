@@ -2,6 +2,10 @@
  * Support for pipes to self
  * Better support for UNIX sockets
  * Rudimentary support for Gtk+ applications
+ * Lots of refactoring for portability
+
+0.5.3
+ * Compile fix for older versions of binutils
 
 0.5.2
  * Fix more AMD64 issues.
