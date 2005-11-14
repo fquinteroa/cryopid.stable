@@ -339,7 +339,11 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 		continue;
 	    case -1:
 		/* Add to todo list */
-		debug("     Can process map yet. Saving for later.");
+		if (!ret) {
+		    debug("     No system calls in the image. Can't save process!\n");
+		    abort();
+		}
+		debug("     Cannot process map yet. Saving for later.");
 		list_append(&work_list, strdup(map_line_save));
 		if (!i)
 		    i = work_list.head;
