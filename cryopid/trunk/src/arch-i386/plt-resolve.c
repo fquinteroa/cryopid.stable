@@ -19,10 +19,14 @@ void *plt_resolve(void *l, char *what)
 	strtab = NULL;
 
 	for (dyn = (Elf32_Dyn*)(lm->l_ld); dyn->d_tag != DT_NULL; dyn++) {
-	    if (dyn->d_tag == DT_STRTAB)
-		strtab = (char *)(dyn->d_un.d_ptr);
-	    if (dyn->d_tag == DT_SYMTAB)
-		sym = (Elf32_Sym *)(dyn->d_un.d_ptr);
+	    switch (dyn->d_tag) {
+		case DT_STRTAB:
+		    strtab = (char*)(dyn->d_un.d_ptr);
+		    break;
+		case DT_SYMTAB:
+		    sym = (Elf32_Sym*)(dyn->d_un.d_ptr);
+		    break;
+	    }
 	}
 	
 	while (sym) {
@@ -30,14 +34,8 @@ void *plt_resolve(void *l, char *what)
 		break;
 	    if (strcmp(strtab + sym->st_name, what) == 0) {
 		val = (void*)(lm->l_addr + sym->st_value);
-		if (sym->st_value) {
-		    /*
-		    debug("--> we have found %s @ 0x%08x (0x%08lx)",
-			    strtab + sym->st_name, sym->st_value,
-			    (unsigned long)(lm->l_addr + sym->st_value));
-			    */
+		if (sym->st_value)
 		    return val;
-		}
 	    }
 	    sym++;
 	}
