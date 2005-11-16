@@ -12,9 +12,13 @@
 #include "cpimage.h"
 #include "tcpcp.h"
 
+/* dietlibc doesn't play ball with isdigit */
+#define isdigit(x) ((x) >= '0' && (x) <= '9')
+
 #define PROTO_UNIX	1
 #define PROTO_TCP	6
 #define PROTO_UDP	17
+#define PROTO_X		666
 
 struct unix_sock_info_t {
     int listening;
@@ -25,10 +29,11 @@ struct unix_sock_info_t {
 
 static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inode)
 {
-#ifdef USE_TCPCP
     char line[200], *p;
     int i;
     FILE *f;
+    struct sockaddr_in sin;
+    int sz;
     
     f = fopen("/proc/net/tcp", "r");
     if (f == NULL) {
@@ -52,6 +57,23 @@ static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inod
 
     /* We have a match, now just parse the line */
 
+
+
+    /* If it is on port 6000-6003, consider it an X display */
+    sz = sizeof(sin);
+    if (r_getpeername(pid, fd, (struct sockaddr*)&sin, &sz) == 0) {
+	int port = htons(sin.sin_port);
+	printf("fd %d connects to %d.%d.%d.%d:%d\n", fd,
+		(sin.sin_addr.s_addr >> 0 ) & 0xff,
+		(sin.sin_addr.s_addr >> 8 ) & 0xff,
+		(sin.sin_addr.s_addr >> 16) & 0xff,
+		(sin.sin_addr.s_addr >> 24) & 0xff,
+		port);
+	if (6000 <= port && port <= 6003)
+	    return PROTO_X;
+    }
+
+#ifdef USE_TCPCP
     /* FIXME: verify state and handle other ones */
 
     p = line;
@@ -60,11 +82,8 @@ static int get_tcp_socket(struct cp_socket_tcp *tcp, pid_t pid, int fd, int inod
     if (!tcp->ici)
 	debug("tcpcp_get(%d, %d): %s (%d)", pid, fd, strerror(errno), errno);
     debug("ici is %p", tcp->ici);
-
-    return 1;
-#else
-    return 0;
 #endif
+    return PROTO_TCP;
 }
 
 static int get_socket_info(int inode, struct unix_sock_info_t *info)
@@ -128,6 +147,10 @@ static int get_socket_info(int inode, struct unix_sock_info_t *info)
 static int get_unix_socket(struct cp_socket_unix *u, pid_t pid, int fd,
 	int inode)
 {
+#ifdef USE_GTK
+    int xsocket;
+    char *p;
+#endif
     struct unix_sock_info_t usi;
     socklen_t sz;
 
@@ -152,10 +175,28 @@ static int get_unix_socket(struct cp_socket_unix *u, pid_t pid, int fd,
     u->sockname.sun_path[sizeof(u->sockname.sun_path)-1] = '\0';
     u->peername.sun_path[sizeof(u->peername.sun_path)-1] = '\0';
 
+#ifdef USE_GTK
+    /* Determine if it's an X server socket (match against m#/X\d+$#) */
+    xsocket = 0;
+    for (p = &u->peername.sun_path[strlen(u->peername.sun_path)-1];
+	    p >= u->peername.sun_path && *p != '/';
+	    p--) {
+	if (!isdigit(*p)) {
+	    xsocket = (*p == 'X');
+	    break;
+	}
+    }
+    /* Make sure we actually had some digits */
+    if (xsocket && !isdigit(u->peername.sun_path[strlen(u->peername.sun_path)-1]))
+	xsocket = 0;
+    if (xsocket)
+	return PROTO_X;
+#endif
+
     debug("fd %d (ino %d): UNIX socket connected from %s to %s (listening: %d)",
 	    fd, inode, u->sockname.sun_path, u->peername.sun_path, u->listening);
 
-    return 1;
+    return PROTO_UNIX;
 }
 
 static void write_chunk_fd_socket_tcp(void *fptr, struct cp_socket_tcp *tcp)
@@ -180,10 +221,12 @@ static void write_chunk_fd_socket_unix(void *fptr, struct cp_socket_unix *u)
 void fetch_fd_socket(pid_t pid, int flags, int fd, int inode,
 		struct cp_socket *socket)
 {
-    if (get_tcp_socket(&socket->s_tcp, pid, fd, inode))
-	socket->proto = PROTO_TCP;
-    else if (get_unix_socket(&socket->s_unix, pid, fd, inode))
-	socket->proto = PROTO_UNIX;
+    int ret;
+    ret = get_tcp_socket(&socket->s_tcp, pid, fd, inode);
+    if (ret == 0)
+	ret = get_unix_socket(&socket->s_unix, pid, fd, inode);
+    if (ret != 0)
+	socket->proto = ret;
 }
 
 void write_chunk_fd_socket(void *fptr, struct cp_socket *socket)
@@ -197,6 +240,8 @@ void write_chunk_fd_socket(void *fptr, struct cp_socket *socket)
 	    write_chunk_fd_socket_unix(fptr, &socket->s_unix);
 	    break;
 	case PROTO_UDP:
+	    break;
+	case PROTO_X:
 	    break;
     }
 }
