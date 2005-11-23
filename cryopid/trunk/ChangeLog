@@ -5,6 +5,8 @@
  * Lots of refactoring for portability
  * Don't depend on finding a syscall before needing a remote syscall
  * Support for syscalls via vsyscall DSO
+ * Save and restore deleted (eg temporary) files
+ * Send SIGWINCH when resuming
 
 0.5.3
  * Compile fix for older versions of binutils
