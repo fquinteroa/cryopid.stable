@@ -19,28 +19,13 @@ static void move_fds(int fds[2], int rfd, int wfd)
     }
 }
 
-static void make_dummy_fd(int fd) {
-    static int n = 3;
-    int fds[2];
-    pipe(fds);
-    if (fds[0] != fd) {
-	dup2(fds[0], fd);
-	close(fds[0]);
-    }
-    if (fds[1] != console_fd+n) {
-	dup2(fds[1], console_fd+ ++n);
-	close(fds[1]);
-    }
-}
-
 void read_chunk_fd_fifo(void *fptr, struct cp_fd *fd, int action)
 {
     read_bit(fptr, &fd->fifo.target_pid, sizeof(fd->fifo.target_pid));
     read_bit(fptr, &fd->fifo.self_other_fd, sizeof(fd->fifo.self_other_fd));
     if (action & ACTION_PRINT) {
 	if (fd->fifo.target_pid == -1)
-	    //fprintf(stderr, "FIFO (more details to come) ");
-	    make_dummy_fd(fd->fd);
+	    fprintf(stderr, "FIFO (more details to come) ");
 	else
 	    fprintf(stderr, "FIFO to %d on FD %d", fd->fifo.target_pid,
 		    fd->fifo.self_other_fd);
