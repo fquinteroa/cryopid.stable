@@ -249,8 +249,10 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset);
 void read_chunk_vma(void *fptr, int action);
 void write_chunk_vma(void *fptr, struct cp_vma *data);
 extern int extra_prot_flags;
-extern long scribble_zone;
-extern long syscall_loc;
+extern unsigned long scribble_zone;
+extern unsigned long syscall_loc;
+extern unsigned long vdso_start;
+extern unsigned long vdso_end;
 
 /* cp_sighand.c */
 void read_chunk_sighand(void *fptr, int action);

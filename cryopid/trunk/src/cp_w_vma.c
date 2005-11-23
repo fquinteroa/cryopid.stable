@@ -11,8 +11,10 @@
 #include "process.h"
 #include "cryopid.h"
 
-long scribble_zone = 0; /* somewhere to scribble on in child */
-long syscall_loc = 0;   /* address of a syscall instruction */
+unsigned long scribble_zone = 0; /* somewhere to scribble on in child */
+unsigned long syscall_loc   = 0; /* address of a syscall instruction  */
+unsigned long vdso_start    = 0; /* start address of vdso page        */
+unsigned long vdso_end      = 0; /* end address of vdso page          */
 
 void write_chunk_vma(void *fptr, struct cp_vma *data)
 {
@@ -59,15 +61,11 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     vma->start = strtoul(ptr1, NULL, 16);
 
     if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+PAGE_SIZE) {
-	fprintf(stderr, "     Ignoring map - looks like resumer.\n");
+	fprintf(stderr, "     Ignoring map - looks like resumer trampoline.\n");
 	return 0;
     }
     if (vma->start >= RESUMER_START && vma->start <= RESUMER_END) {
 	fprintf(stderr, "     Ignoring map - looks like resumer.\n");
-	return 0;
-    }
-    if (vma->start >= get_task_size()) {
-	fprintf(stderr, "     Ignoring map - in kernel space.\n");
 	return 0;
     }
 
@@ -78,6 +76,16 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     }
     *ptr2 = '\0';
     vma->length = strtoul(ptr1, NULL, 16) - vma->start;
+
+    if (vma->start >= get_task_size()) {
+	if (strstr(ptr2+1, "[vdso]")) {
+	    vdso_start = vma->start;
+	    vdso_end   = vma->start + vma->length;
+	    fprintf(stderr, "     Ignoring map - vsyscall page.\n");
+	} else
+	    fprintf(stderr, "     Ignoring map - in kernel space.\n");
+	return 0;
+    }
 
     vma->prot = 0;
     ptr1 = ptr2+1;
