@@ -6,6 +6,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 #include <libwnck/libwnck.h>
+#include <unistd.h>
 
 /* Some widgets to keep track of */
 GtkWidget *pid_entry;
@@ -15,39 +16,30 @@ GtkWidget *go_button;
 
 static Window GetWindow(Display *dpy)
 {
-	Cursor cursor;
-	XEvent event;
 	Window target_win = None, root = RootWindow(dpy, DefaultScreen(dpy)); // FIXME
-	int status, buttons = 0, dummy;
+	XEvent event;
+	Cursor cursor;
+	int buttons = 0, dummy;
 	unsigned int udummy;
 
 	cursor = XCreateFontCursor(dpy, XC_crosshair);
-
-	status = XGrabPointer(dpy, root, False, ButtonPressMask|ButtonReleaseMask,
-			GrabModeSync, GrabModeAsync, root, cursor, CurrentTime);
-	if (status != GrabSuccess)
+	if (XGrabPointer(dpy, root, False, ButtonPressMask|ButtonReleaseMask,
+			GrabModeSync, GrabModeAsync, root, cursor, CurrentTime) != GrabSuccess)
 		return -1;
 
-	while ((target_win == None) || (buttons != 0)) {
+	while (!target_win || buttons) {
 		XAllowEvents(dpy, SyncPointer, CurrentTime);
 		XWindowEvent(dpy, root, ButtonPressMask|ButtonReleaseMask, &event);
-		switch (event.type) {
-			case ButtonPress:
-					if (target_win == None) {
-						target_win = event.xbutton.subwindow;
-						if (target_win == None)
-							target_win = root;
-					}
-					buttons++;
-					break;
-			case ButtonRelease:
-					if (buttons > 0)
-						buttons--;
-					break;
-		}
+		if (event.type == ButtonPress) {
+			if (target_win == None)
+				target_win = event.xbutton.subwindow;
+			buttons++;
+		} else if (event.type == ButtonRelease && buttons)
+			buttons--;
 	}
 
 	XUngrabPointer(dpy, CurrentTime);
+	XFreeCursor(dpy, cursor);
 
 	if (XGetGeometry(dpy, target_win, &root, &dummy, &dummy,
 				&udummy, &udummy, &udummy, &udummy) && target_win != root)
@@ -84,7 +76,13 @@ static void window_selector(GtkWidget *widget, GdkEvent *event, gpointer *data)
 
 static void freeze_it(GtkWidget *widget, GdkEvent *event, gpointer *data)
 {
-	printf("Moon\n");
+	printf("pid: %s\n", gtk_entry_get_text(GTK_ENTRY(pid_entry)));
+	if (!fork()) {
+		execl("../src/freeze", "freeze", "-l", 
+				gtk_entry_get_text(GTK_ENTRY(output_file)),
+				gtk_entry_get_text(GTK_ENTRY(pid_entry)),
+				NULL);
+	}
 }
 
 static void create_main_window()
