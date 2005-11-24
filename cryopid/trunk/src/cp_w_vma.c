@@ -78,12 +78,10 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     vma->length = strtoul(ptr1, NULL, 16) - vma->start;
 
     if (vma->start >= get_task_size()) {
-	if (strstr(ptr2+1, "[vdso]")) {
-	    vdso_start = vma->start;
-	    vdso_end   = vma->start + vma->length;
-	    fprintf(stderr, "     Ignoring map - vsyscall page.\n");
-	} else
-	    fprintf(stderr, "     Ignoring map - in kernel space.\n");
+	/* Bet on the fact that vdso page is at the end of memory */
+	vdso_start = vma->start;
+	vdso_end   = vma->start + vma->length;
+	fprintf(stderr, "     Ignoring map - in kernel space.\n");
 	return 0;
     }
 
