@@ -12,7 +12,7 @@
 #include "list.h"
 #include "cplayout.h"
 
-#define IMAGE_VERSION 0x03
+#define IMAGE_VERSION 0x04
 
 #define ACTION_LOAD		0x01
 #define ACTION_PRINT		0x02
