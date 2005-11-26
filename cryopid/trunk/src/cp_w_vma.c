@@ -338,7 +338,7 @@ void fetch_chunks_vma(pid_t pid, int flags, struct list *l, long *bin_offset)
 	 * need a syscall_loc in order to do non-readable VMAs (to call
 	 * mprotect). Put these undoable segments into a list to process again
 	 */
-	switch (get_one_vma(pid, map_line, &chunk->vma, flags & GET_LIBRARIES_TOO,
+	switch (get_one_vma(pid, map_line, &chunk->vma, flags & FLAG_GET_LIBRARIES,
 		    vma_no, bin_offset)) {
 	    case 0:
 		debug("     Error parsing map: %s", map_line_save);

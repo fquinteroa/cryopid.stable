@@ -182,14 +182,18 @@ static void start_ptrace(pid_t pid)
     }
 }
 
-static void end_ptrace(pid_t pid)
+static void end_ptrace(pid_t pid, int flags)
 {
     long ret;
 
-    ret = ptrace(PTRACE_DETACH, pid, 0, 0);
-    if (ret == -1) {
-	perror("Failed to detach");
-	exit(1);
+    if (flags & FLAG_KILL_PROCESS) {
+	ret = ptrace(PTRACE_KILL, pid, 0, 0);
+	if (ret == -1)
+	    perror("Failed to kill process.");
+    } else {
+	ret = ptrace(PTRACE_DETACH, pid, 0, 0);
+	if (ret == -1)
+	    perror("Failed to detach");
     }
 }
 
@@ -235,7 +239,7 @@ out_ptrace_regs:
     restore_registers(pid, &r);
 
 out_ptrace:
-    end_ptrace(pid);
+    end_ptrace(pid, flags);
     
     if (!success)
 	abort();

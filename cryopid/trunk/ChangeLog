@@ -1,3 +1,6 @@
+
+ * Allow killing original process after snapshotting.
+
 0.5.9
  * Support for pipes to self
  * Better support for UNIX sockets

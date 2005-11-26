@@ -28,6 +28,7 @@ void usage(char* argv0)
 "self-executing file.\n"
 "\n"
 "    -l      Include libraries in the image of the file for a full image.\n"
+"    -k      Kill original process immediately after snapshotting.\n"
 /*
 "    -w <writer> Nomiate an output writer to use.\n"
 "    -f      Save the contents of open files into the image.\n"
@@ -62,18 +63,21 @@ int main(int argc, char** argv)
 	    {0, 0, 0, 0},
 	};
 
-	c = getopt_long(argc, argv, "l"/*"fcw:"*/, long_options, &option_index);
+	c = getopt_long(argc, argv, "lk"/*"fcw:"*/, long_options, &option_index);
 	if (c == -1)
 	    break;
 	switch(c) {
 	    case 'l':
-		flags |= GET_LIBRARIES_TOO;
+		flags |= FLAG_GET_LIBRARIES;
 		break;
 	    case 'f':
-		flags |= GET_OPEN_FILE_CONTENTS;
+		flags |= FLAG_GET_FILE_CONTENTS;
 		break;
 	    case 'c':
 		get_children = 1;
+		break;
+	    case 'k':
+		flags |= FLAG_KILL_PROCESS;
 		break;
 	    /*
 	    case 'w':

@@ -16,10 +16,11 @@
 
 #define ACTION_LOAD		0x01
 #define ACTION_PRINT		0x02
-#define ACTION_LOADPRINT	0x03
+#define ACTION_LOADPRINT	(ACTION_LOAD|ACTION_PRINT)
 
-#define GET_LIBRARIES_TOO          0x01
-#define GET_OPEN_FILE_CONTENTS     0x02
+#define FLAG_GET_LIBRARIES          0x01
+#define FLAG_GET_FILE_CONTENTS      0x02
+#define FLAG_KILL_PROCESS           0x04
 
 /* Constants for cp_chunk.type */
 #define CP_CHUNK_HEADER		0x01
@@ -48,7 +49,7 @@ struct cp_header {
     uid_t uid;
     gid_t gid;
     int n_children;
-    off_t *children_offsets;
+    int children_offsets[];
 };
 
 struct cp_misc {
