@@ -5,7 +5,7 @@
 #include <asm/ucontext.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
-#include <asm/ptrace.h>
+#include <linux/ptrace.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>

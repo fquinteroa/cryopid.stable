@@ -1,8 +1,8 @@
+#include <sys/ptrace.h>
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
 #include <sys/mman.h>
-#include <sys/ptrace.h>
 
 #include "cpimage.h"
 #include "cryopid.h"
