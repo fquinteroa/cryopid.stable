@@ -8,7 +8,7 @@ PROVIDE (__stack = 0); PROVIDE (___stack = 0);
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = 0x00001000); . = 0x00001000 + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = 0x00010000); . = 0x00010000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) }
   .hash           : { *(.hash) }
   .dynsym         : { *(.dynsym) }
@@ -220,4 +220,5 @@ SECTIONS
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
   /DISCARD/ : { *(.note.GNU-stack) }
+  cryopid.image (NOLOAD) : { LONG(0x4350494D) } /* CPIM */
 }

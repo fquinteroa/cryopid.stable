@@ -10,34 +10,34 @@
 
 void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 {
-//     struct cp_chunk *chunk = NULL;
-//     struct user *user_data;
-//     long pos;
-//     int* user_data_ptr;
-// 
-//     user_data = xmalloc(sizeof(struct user));
-//     user_data_ptr = (int*)user_data;
-// 
-//     /* We have a memory segment. We should retrieve its data */
-//     for(pos = 0; pos < sizeof(struct user)/sizeof(int); pos++) {
-// 	user_data_ptr[pos] =
-// 	    ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*4), NULL);
-// 	if (errno != 0) {
-// 	    perror("ptrace(PTRACE_PEEKDATA): ");
-// 	}
-//     }
-// 
-//     /* Restart a syscall on the other side */
-//     if (is_in_syscall(pid, user_data)) {
-// 	fprintf(stderr, "[+] Process is probably in syscall. Returning EINTR.\n");
-// 	set_syscall_return(user_data, -EINTR);
-//     }
-// 
-//     chunk = xmalloc(sizeof(struct cp_chunk));
-//     chunk->type = CP_CHUNK_REGS;
-//     chunk->regs.user_data = user_data;
-//     chunk->regs.stopped = stopped;
-//     list_append(l, chunk);
+    struct cp_chunk *chunk = NULL;
+    struct user *user_data;
+    long pos;
+    int* user_data_ptr;
+
+    user_data = xmalloc(sizeof(struct user));
+    user_data_ptr = (int*)user_data;
+
+    for(pos = 0; pos < sizeof(struct user)/sizeof(int); pos++) {
+	errno = 0;
+	user_data_ptr[pos] =
+	    ptrace(PTRACE_PEEKUSER, pid, pos*sizeof(long), NULL);
+	if (errno != 0) {
+	    perror("ptrace(PTRACE_PEEKDATA): ");
+	}
+    }
+
+    /* Restart a syscall on the other side */
+    if (is_in_syscall(pid, user_data)) {
+	fprintf(stderr, "[+] Process is probably in syscall. Returning EINTR.\n");
+	set_syscall_return(user_data, -EINTR);
+    }
+
+    chunk = xmalloc(sizeof(struct cp_chunk));
+    chunk->type = CP_CHUNK_REGS;
+    chunk->regs.user_data = user_data;
+    chunk->regs.stopped = stopped;
+    list_append(l, chunk);
 }
 
 void write_chunk_regs(void *fptr, struct cp_regs *data)

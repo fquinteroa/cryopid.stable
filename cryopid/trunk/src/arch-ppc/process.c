@@ -103,7 +103,7 @@ static int save_registers(pid_t pid, struct user* r)
 	l[i] = ptrace(PTRACE_PEEKUSER, pid, i*sizeof(long), 0);
 	//printf("Reg %d: 0x%lx\n", i, l[i]);
 	if (errno) {
-	    perror("ptrace getregs");
+	    debug("ptrace getregs(%d): %s", i*sizeof(long), strerror(errno));
 	    return errno;
 	}
     }
