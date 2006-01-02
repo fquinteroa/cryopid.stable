@@ -34,16 +34,16 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 	    user_data->regs.pc, user_data->regs.npc,
 	    user_data->regs.psr, user_data->regs.y);
     debug("G:            0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
-	    user_data->regs.regs[0], user_data->regs.regs[1],
-	    user_data->regs.regs[2], user_data->regs.regs[3],
-	    user_data->regs.regs[4], user_data->regs.regs[5],
-	    user_data->regs.regs[6]);
+	    user_data->regs.regs[1], user_data->regs.regs[2],
+	    user_data->regs.regs[3], user_data->regs.regs[4],
+	    user_data->regs.regs[5], user_data->regs.regs[6],
+	    user_data->regs.regs[7]);
 
     debug("O: 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
-	    user_data->regs.regs[7], user_data->regs.regs[8],
-	    user_data->regs.regs[9], user_data->regs.regs[10],
-	    user_data->regs.regs[11], user_data->regs.regs[12],
-	    user_data->regs.regs[13], user_data->regs.regs[14]);
+	    user_data->regs.regs[8], user_data->regs.regs[9],
+	    user_data->regs.regs[10], user_data->regs.regs[11],
+	    user_data->regs.regs[12], user_data->regs.regs[13],
+	    user_data->regs.regs[14], user_data->regs.regs[15]);
 
     /* Get the other regs off the stack */
     memcpy_from_target(pid, or, mysp, sizeof(or));

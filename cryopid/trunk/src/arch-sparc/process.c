@@ -11,6 +11,7 @@
 #include <asm/reg.h>
 #include <asm/page.h>
 #include <asm/ptrace.h>
+#include <asm/user.h>
 
 #include "cryopid.h"
 #include "cpimage.h"
@@ -98,16 +99,26 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
 
 static int save_registers(pid_t pid, struct pt_regs *r)
 {
+    int i;
     if (ptrace(PTRACE_GETREGS, pid, r, NULL) < 0) {
 	perror("ptrace getregs");
 	return -errno;
     }
+    for (i = 15; i > 0; i--)
+	r->u_regs[i] = r->u_regs[i-1];
     return 0;
 }
 
 static int restore_registers(pid_t pid, struct pt_regs *r)
 {
-    if (ptrace(PTRACE_SETREGS, pid, r, NULL) < 0) {
+    int i;
+    struct pt_regs nr;
+
+    memcpy(&nr, r, sizeof(nr));
+    for (i = 1; i < 16; i++)
+	nr.u_regs[i-1] = nr.u_regs[i];
+
+    if (ptrace(PTRACE_SETREGS, pid, &nr, NULL) < 0) {
 	perror("ptrace setregs");
 	return -errno;
     }
@@ -211,7 +222,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     }
 
     extern unsigned long mysp;
-    mysp = r.u_regs[UREG_O6];
+    mysp = r.u_regs[UREG_I6];
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
@@ -228,8 +239,8 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     pagebackup = backup_page(pid, (void*)scribble_zone);
 
     fetch_chunks_fd(pid, flags, process_image);
-    fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
     fetch_chunks_sighand(pid, flags, process_image);
+    fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
 
     success = 1;
 
@@ -268,26 +279,28 @@ static inline unsigned long __remote_syscall(pid_t pid,
     memcpy(&regs, &orig_regs, sizeof(regs));
 
     regs.u_regs[UREG_G1] = syscall_no;
-    if (use_o0) regs.u_regs[UREG_O0] = o0;
-    if (use_o1) regs.u_regs[UREG_O1] = o1;
-    if (use_o2) regs.u_regs[UREG_O2] = o2;
-    if (use_o3) regs.u_regs[UREG_O3] = o3;
-    if (use_o4) regs.u_regs[UREG_O4] = o4;
-
+    if (use_o0) regs.u_regs[UREG_I0] = o0;
+    if (use_o1) regs.u_regs[UREG_I1] = o1;
+    if (use_o2) regs.u_regs[UREG_I2] = o2;
+    if (use_o3) regs.u_regs[UREG_I3] = o3;
+    if (use_o4) regs.u_regs[UREG_I4] = o4;
+    
     /* Set up registers for ptrace syscall */
     regs.pc = syscall_loc;
     regs.npc = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
+#if 0
     printf("Regs at 0x%lx/0x%lx are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
 	    regs.pc, 
 	    regs.npc, 
 	    regs.u_regs[UREG_G1], 
-	    regs.u_regs[UREG_O0], 
-	    regs.u_regs[UREG_O1], 
-	    regs.u_regs[UREG_O2], 
-	    regs.u_regs[UREG_O3]);
+	    regs.u_regs[UREG_I0], 
+	    regs.u_regs[UREG_I1], 
+	    regs.u_regs[UREG_I2], 
+	    regs.u_regs[UREG_I3]);
+#endif
     /* Execute call - there's no PTRACE_SINGLESTEP on sparc. Instead use
      * PTRACE_SYSCALL
      */
@@ -300,31 +313,9 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	perror("Failed to wait for child");
 	abort();
     }
-    printf("waited and got SIG %d\n", WSTOPSIG(status));
-    if (WSTOPSIG(status) != SIGTRAP) {
-	struct pt_regs new_regs;
-	save_registers(pid, &new_regs);
-	printf("Interrupted at 0x%lx/0x%lx Mid regs are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
-		new_regs.pc,
-		new_regs.npc,
-		new_regs.u_regs[UREG_G1],
-		new_regs.u_regs[UREG_O0],
-		new_regs.u_regs[UREG_O1],
-		new_regs.u_regs[UREG_O2],
-		new_regs.u_regs[UREG_O3]);
-	/* do it again */
-	restore_registers(pid, &regs);
-	if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
-	    perror("ptrace syscall");
-	    abort();
-	}
-	ret = waitpid(pid, &status, 0);
-	if (ret == -1) {
-	    perror("Failed to wait for child");
-	    abort();
-	}
-	printf("waited again got SIG %d\n", WSTOPSIG(status));
-    }
+
+    if (restore_registers(pid, &regs) < 0)
+	abort();
 
     if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
 	perror("ptrace syscall");
@@ -335,7 +326,6 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	perror("Failed to wait for child");
 	abort();
     }
-    printf("waited and got SIG %d\n", WSTOPSIG(status));
 
     /* Get our new registers */
     if (save_registers(pid, &regs) < 0)
@@ -346,15 +336,14 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	abort();
 
     if (regs.psr & PSR_C) { /* error */
-	errno = regs.u_regs[UREG_O0];
-	fprintf(stderr, "syscall %s returns error %s\n", syscall_name, strerror(errno));
-	errno = regs.u_regs[UREG_O0];
+	errno = regs.u_regs[UREG_I0];
+	// fprintf(stderr, "syscall %s returns error %s\n", syscall_name, strerror(errno));
 	return -1;
     }
 
     errno = 0;
-    fprintf(stderr, "syscall %s returns %d\n", syscall_name, regs.u_regs[UREG_O0]);
-    return regs.u_regs[UREG_O0];
+    // fprintf(stderr, "syscall %s returns %ld\n", syscall_name, regs.u_regs[UREG_I0]);
+    return regs.u_regs[UREG_I0];
 }
 
 #define __rsyscall0(type,name) \
@@ -407,6 +396,26 @@ static inline unsigned long __remote_syscall(pid_t pid,
 		1, (unsigned long)arg5); \
     }
 
+__rsyscall3(off_t, read, int, fd, void*, buf, size_t, count);
+ssize_t r_read(pid_t pid, int fd, void* buf, size_t count)
+{
+    int off;
+    off = 0;
+    while (count > 0) {
+	int amt = PAGE_SIZE; /* must be less than size of scribble zone */
+	int err;
+	if (count < amt)
+	    amt = count;
+	err = __r_read(pid, fd, (void*)scribble_zone, amt);
+	if (err <= 0)
+	    return err;
+	memcpy_from_target(pid, (char*)buf + off, (void*)scribble_zone, err);
+	off += err;
+	count -= err;
+    }
+    return off;
+}
+
 __rsyscall3(off_t, lseek, int, fd, off_t, offset, int, whence);
 off_t r_lseek(pid_t pid, int fd, off_t offset, int whence)
 {
@@ -449,6 +458,48 @@ __rsyscall5(int, getsockopt, int, s, int, level, int, optname, void*, optval, so
 int r_getsockopt(pid_t pid, int s, int level, int optname, void* optval, socklen_t *optlen)
 {
     return __r_getsockopt(pid, s, level, optname, optval, optlen);
+}
+
+__rsyscall3(int, getpeername, int, s, struct sockaddr*, name, socklen_t*, namelen);
+int r_getpeername(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
+{
+    int ret;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_getpeername(pid, s,
+	    (void*)(scribble_zone+0x10),
+	    (void*)(scribble_zone+0x20));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
+
+    return ret;
+}
+
+__rsyscall3(int, getsockname, int, s, struct sockaddr*, name, socklen_t*, namelen);
+int r_getsockname(pid_t pid, int s, struct sockaddr *name, socklen_t *namelen)
+{
+    int ret;
+
+    memcpy_into_target(pid, (void*)(scribble_zone+0x10), namelen, sizeof(*namelen));
+    memcpy_into_target(pid, (void*)(scribble_zone+0x20), name, *namelen);
+
+    ret = __r_getsockname(pid, s,
+	    (void*)(scribble_zone+0x10),
+	    (void*)(scribble_zone+0x20));
+    
+    if (ret == -1)
+	return -1;
+
+    memcpy_from_target(pid, namelen, (void*)(scribble_zone+0x10), sizeof(*namelen));
+    memcpy_from_target(pid, name, (void*)(scribble_zone+0x20), 1+*namelen);
+
+    return ret;
 }
 
 /* vim:set ts=8 sw=4 noet: */

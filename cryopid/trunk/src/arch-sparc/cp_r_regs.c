@@ -1,3 +1,4 @@
+#include <linux/types.h>
 #include <linux/unistd.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
@@ -18,6 +19,9 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
     syscall_check(
 	(long)mmap((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC,
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
+
+    /* Flush windows */
+    *p++=0x91d02003;                                      /* t 0x03           */
 
     /* munmap our custom malloc space */
     *p++=0x82102000 | __NR_munmap;                        /* mov foo, %g1     */
@@ -60,18 +64,21 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
     *p++=0x17000000 | HIB(r->r_o3); *p++=0x9612e000 | LOB(r->r_o3);
     *p++=0x19000000 | HIB(r->r_o4); *p++=0x98132000 | LOB(r->r_o4);
     *p++=0x1b000000 | HIB(r->r_o5); *p++=0x9a136000 | LOB(r->r_o5);
-    *p++=0x1d000000 | HIB(r->r_o6); *p++=0x9c13a000 | LOB(r->r_o6);
-    *(long*)(code+0xffc) = r->r_o7;
+    /* SP must be loaded atomically */
+    *(long*)(code+0xff8) = r->r_o6;
+    *p++=0xdc002ff8; /* ld [ 0xff8 ], %o6 */
+    //*p++=0x1d000000 | HIB(r->r_o6); *p++=0x9c13a000 | LOB(r->r_o6);
+    *(long*)(code+0xffc) = r->r_o7; /* used for the jmp. save him for later. */
     *p++=0x1f000000 | HIB(r->r_npc); *p++=0x9e13e000 | LOB(r->r_npc);
 
-    *p++=0x21000000 | HIB(or->r_l0); *p++=0xb0142000 | LOB(or->r_l0);
-    *p++=0x23000000 | HIB(or->r_l1); *p++=0xb2146000 | LOB(or->r_l1);
-    *p++=0x25000000 | HIB(or->r_l2); *p++=0xb414a000 | LOB(or->r_l2);
-    *p++=0x27000000 | HIB(or->r_l3); *p++=0xb614e000 | LOB(or->r_l3);
-    *p++=0x29000000 | HIB(or->r_l4); *p++=0xb8152000 | LOB(or->r_l4);
-    *p++=0x2b000000 | HIB(or->r_l5); *p++=0xba156000 | LOB(or->r_l5);
-    *p++=0x2d000000 | HIB(or->r_l6); *p++=0xbc15a000 | LOB(or->r_l6);
-    *p++=0x2f000000 | HIB(or->r_l7); *p++=0xbe15e000 | LOB(or->r_l7);
+    *p++=0x21000000 | HIB(or->r_l0); *p++=0xa0142000 | LOB(or->r_l0);
+    *p++=0x23000000 | HIB(or->r_l1); *p++=0xa2146000 | LOB(or->r_l1);
+    *p++=0x25000000 | HIB(or->r_l2); *p++=0xa414a000 | LOB(or->r_l2);
+    *p++=0x27000000 | HIB(or->r_l3); *p++=0xa614e000 | LOB(or->r_l3);
+    *p++=0x29000000 | HIB(or->r_l4); *p++=0xa8152000 | LOB(or->r_l4);
+    *p++=0x2b000000 | HIB(or->r_l5); *p++=0xaa156000 | LOB(or->r_l5);
+    *p++=0x2d000000 | HIB(or->r_l6); *p++=0xac15a000 | LOB(or->r_l6);
+    *p++=0x2f000000 | HIB(or->r_l7); *p++=0xae15e000 | LOB(or->r_l7);
 
     *p++=0x31000000 | HIB(or->r_i0); *p++=0xb0162000 | LOB(or->r_i0);
     *p++=0x33000000 | HIB(or->r_i1); *p++=0xb2166000 | LOB(or->r_i1);
@@ -84,7 +91,7 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
 
     /* jump back to where we were. */
     *p++=0x81c3c000; /* jmp %o7, %g0 */
-    *p++=0xde002ffc; /* ld [ 0xfff ], %o7 */
+    *p++=0xde002ffc; /* ld [ 0xffc ], %o7 ... Fits neatly in the delay slot. */
 }
 
 void read_chunk_regs(void *fptr, int action)
