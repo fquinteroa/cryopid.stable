@@ -18,7 +18,7 @@ static void load_chunk_regs(struct user *user, int stopped)
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
     cp = code;
-    data = (long*)(code + (PAGE_SIZE >> 1)); /* PAGE_SIZE/2 in longs */
+    data = (long*)(code + (PAGE_SIZE >> 4)); /* PAGE_SIZE/2 in longs */
 
     /* put return dest onto stack too */
     //r->r_o6-=8;
