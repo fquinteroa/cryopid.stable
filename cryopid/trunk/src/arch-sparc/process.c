@@ -96,7 +96,7 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
     return 1;
 }
 
-static int save_registers(pid_t pid, struct regs *r)
+static int save_registers(pid_t pid, struct pt_regs *r)
 {
     if (ptrace(PTRACE_GETREGS, pid, r, NULL) < 0) {
 	perror("ptrace getregs");
@@ -105,7 +105,7 @@ static int save_registers(pid_t pid, struct regs *r)
     return 0;
 }
 
-static int restore_registers(pid_t pid, struct regs *r)
+static int restore_registers(pid_t pid, struct pt_regs *r)
 {
     if (ptrace(PTRACE_SETREGS, pid, r, NULL) < 0) {
 	perror("ptrace setregs");
@@ -201,7 +201,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 {
     int success = 0;
     char* pagebackup;
-    struct regs r;
+    struct pt_regs r;
 
     start_ptrace(pid);
 
@@ -211,7 +211,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     }
 
     extern unsigned long mysp;
-    mysp = r.r_o6;
+    mysp = r.u_regs[UREG_O6];
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
@@ -253,7 +253,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	int use_o3, unsigned long o3,
 	int use_o4, unsigned long o4)
 {
-    struct regs orig_regs, regs;
+    struct pt_regs orig_regs, regs;
     unsigned long ret;
     int status;
 
@@ -267,27 +267,27 @@ static inline unsigned long __remote_syscall(pid_t pid,
 
     memcpy(&regs, &orig_regs, sizeof(regs));
 
-    regs.r_g1 = syscall_no;
-    if (use_o0) regs.r_o0 = o0;
-    if (use_o1) regs.r_o1 = o1;
-    if (use_o2) regs.r_o2 = o2;
-    if (use_o3) regs.r_o3 = o3;
-    if (use_o4) regs.r_o4 = o4;
+    regs.u_regs[UREG_G1] = syscall_no;
+    if (use_o0) regs.u_regs[UREG_O0] = o0;
+    if (use_o1) regs.u_regs[UREG_O1] = o1;
+    if (use_o2) regs.u_regs[UREG_O2] = o2;
+    if (use_o3) regs.u_regs[UREG_O3] = o3;
+    if (use_o4) regs.u_regs[UREG_O4] = o4;
 
     /* Set up registers for ptrace syscall */
-    regs.r_pc = syscall_loc;
-    regs.r_npc = syscall_loc;
+    regs.pc = syscall_loc;
+    regs.npc = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
     printf("Regs at 0x%lx/0x%lx are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
-	    regs.r_pc, 
-	    regs.r_npc, 
-	    regs.r_g1, 
-	    regs.r_o0, 
-	    regs.r_o1, 
-	    regs.r_o2, 
-	    regs.r_o3);
+	    regs.pc, 
+	    regs.npc, 
+	    regs.u_regs[UREG_G1], 
+	    regs.u_regs[UREG_O0], 
+	    regs.u_regs[UREG_O1], 
+	    regs.u_regs[UREG_O2], 
+	    regs.u_regs[UREG_O3]);
     /* Execute call - there's no PTRACE_SINGLESTEP on sparc. Instead use
      * PTRACE_SYSCALL
      */
@@ -302,16 +302,16 @@ static inline unsigned long __remote_syscall(pid_t pid,
     }
     printf("waited and got SIG %d\n", WSTOPSIG(status));
     if (WSTOPSIG(status) != SIGTRAP) {
-	struct regs new_regs;
+	struct pt_regs new_regs;
 	save_registers(pid, &new_regs);
 	printf("Interrupted at 0x%lx/0x%lx Mid regs are g1, o0, o1, o2, o3 : 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n",
-		new_regs.r_pc,
-		new_regs.r_npc,
-		new_regs.r_g1,
-		new_regs.r_o0,
-		new_regs.r_o1,
-		new_regs.r_o2,
-		new_regs.r_o3);
+		new_regs.pc,
+		new_regs.npc,
+		new_regs.u_regs[UREG_G1],
+		new_regs.u_regs[UREG_O0],
+		new_regs.u_regs[UREG_O1],
+		new_regs.u_regs[UREG_O2],
+		new_regs.u_regs[UREG_O3]);
 	/* do it again */
 	restore_registers(pid, &regs);
 	if (ptrace(PTRACE_SYSCALL, pid, 1, 0) < 0) {
@@ -345,16 +345,16 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if (regs.r_psr & PSR_C) { /* error */
-	errno = regs.r_o0;
+    if (regs.psr & PSR_C) { /* error */
+	errno = regs.u_regs[UREG_O0];
 	fprintf(stderr, "syscall %s returns error %s\n", syscall_name, strerror(errno));
-	errno = regs.r_o0;
+	errno = regs.u_regs[UREG_O0];
 	return -1;
     }
 
     errno = 0;
-    fprintf(stderr, "syscall %s returns %d\n", syscall_name, regs.r_o0);
-    return regs.r_o0;
+    fprintf(stderr, "syscall %s returns %d\n", syscall_name, regs.u_regs[UREG_O0]);
+    return regs.u_regs[UREG_O0];
 }
 
 #define __rsyscall0(type,name) \
