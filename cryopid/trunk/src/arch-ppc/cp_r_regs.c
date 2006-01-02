@@ -53,7 +53,6 @@ static void load_chunk_regs(struct user *user, int stopped)
     *++data=user->regs.gpr[28]; *code++=0x83800000|(long)data;
     *++data=user->regs.gpr[29]; *code++=0x83a00000|(long)data;
     *++data=user->regs.gpr[30]; *code++=0x83c00000|(long)data;
-    *++data=user->regs.gpr[31]; *code++=0x83e00000|(long)data;
 
     /* raise a SIGSTOP if we were stopped */
     if (stopped) {
@@ -74,6 +73,29 @@ static void load_chunk_regs(struct user *user, int stopped)
     *++data=user->regs.gpr[ 0]; *code++=0x80000000|(long)data;
     *++data=user->regs.gpr[ 3]; *code++=0x80600000|(long)data;
     *++data=user->regs.gpr[ 4]; *code++=0x80800000|(long)data;
+
+    /* Restore the special purpose registers that we can, via r31 */
+    *++data=user->regs.ctr;  *code++=0x83e00000|(long)data; *code++=0x7fe903a6;
+    *++data=user->regs.link; *code++=0x83e00000|(long)data; *code++=0x7fe803a6;
+    *++data=user->regs.xer;  *code++=0x83e00000|(long)data; *code++=0x7fe103a6;
+#if 0 /* "(not used at present)" */
+    *++data=user->regs.mq;   *code++=0x83e00000|(long)data; *code++=0x7fe003a6;
+#endif
+
+    /* And restore r31 */
+    *++data=user->regs.gpr[31]; *code++=0x83e00000|(long)data;
+
+    /* We can use a direct jump back if our address is within 26-bits of 0. */
+    if (user->regs.nip < 0x02000000 || user->regs.nip > 0xfe000000) {
+	*code++=0x48000002|(user->regs.nip);
+    } else {
+	/* Otherwise, we're forced to clobber a register */
+	fprintf(stderr,
+		"Forced to clobber counter register. "
+		"Resumed process may be inconsistent.\n");
+	*++data=user->regs.nip; *code++=0x83e00000|(long)data; *code++=0x7fe903a6;
+	*code++=0x4e800420; /* bctr */
+    }
 
 //     /* jump back to where we were. */
 //     *cp++=0xea;

@@ -33,6 +33,8 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 	set_syscall_return(user_data, -EINTR);
     }
 
+    fprintf(stderr, "PC is at 0x%lx\n", user_data->regs.nip);
+
     chunk = xmalloc(sizeof(struct cp_chunk));
     chunk->type = CP_CHUNK_REGS;
     chunk->regs.user_data = user_data;
