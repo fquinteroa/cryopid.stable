@@ -96,15 +96,6 @@ static void load_chunk_regs(struct user *user, int stopped)
 	*++data=user->regs.nip; *code++=0x83e00000|(long)data; *code++=0x7fe903a6;
 	*code++=0x4e800420; /* bctr */
     }
-
-//     /* jump back to where we were. */
-//     *cp++=0xea;
-//     *(unsigned long*)(cp) = r->eip; cp+= 4;
-//     asm("mov %%cs,%w0": "=q"(r->cs)); /* ensure we use the right CS for the current kernel */
-//     *(unsigned short*)(cp) = r->cs; cp+= 2; /* jmp cs:foo */
-//     syscall_check(
-// 	(int)mprotect((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_EXEC),
-// 	    0, "mmap");
 }
 
 void read_chunk_regs(void *fptr, int action)
