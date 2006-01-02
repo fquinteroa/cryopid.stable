@@ -102,4 +102,11 @@
 + Gtk hooks
 * Fix Gdk
 
+--- Architectures:
++ x86
++ x86_64
+- ppc
+- sparc
+- alpha
+
 vim:ft=diff
