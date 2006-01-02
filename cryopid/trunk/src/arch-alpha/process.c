@@ -16,10 +16,6 @@
 #include "cpimage.h"
 #include "list.h"
 
-struct registers {
-    unsigned long regs[EF_SIZE/8+32];
-};
-
 static int process_was_stopped = 0;
 
 char* backup_page(pid_t target, void* addr)
@@ -107,11 +103,12 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
 static int save_registers(pid_t pid, struct registers *r)
 {
     int i;
-    long* l = r->regs;
-    for (i = 0; i < sizeof(*r)/sizeof(long); i++) {
+    for (i = 0; i < sizeof(r->regs)/sizeof(r->regs[0]); i++) {
 	errno = 0;
-	l[i] = ptrace(PTRACE_PEEKUSER, pid, i, 0);
-	printf("Reg %d: 0x%lx\n", i, l[i]);
+	r->regs[i] = ptrace(PTRACE_PEEKUSER, pid, i, 0);
+#if 0
+	printf("Reg %d: 0x%lx\n", i, r->regs[i]);
+#endif
 	if (errno) {
 	    perror("ptrace getregs");
 	    return errno;
@@ -123,10 +120,9 @@ static int save_registers(pid_t pid, struct registers *r)
 static int restore_registers(pid_t pid, struct registers *r)
 {
     int i;
-    long* l = (long*)r;
-    for (i = 0; i < sizeof(*r)/sizeof(long); i++) {
+    for (i = 0; i < sizeof(r->regs)/sizeof(r->regs[0]); i++) {
 	errno = 0;
-	if (ptrace(PTRACE_POKEUSER, pid, i, l[i]) < 0) {
+	if (ptrace(PTRACE_POKEUSER, pid, i, r->regs[i]) < 0) {
 	    perror("ptrace setregs");
 	    return errno;
 	}
@@ -145,17 +141,17 @@ int is_in_syscall(pid_t pid, struct user *user)
 {
     int inst;
     errno = 0;
-    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs[EF_PC], 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.regs[REG_PC], 0);
     if (errno) {
-	perror("ptrace(PEEKDATA)");
+	debug("ptrace(PEEKDATA, pid, 0x%lx)", user->regs.regs[REG_PC]);
 	return 0;
     }
     return is_a_syscall(inst, 0);
 }
 
 void set_syscall_return(struct user* user, unsigned long val) {
-    user->regs[EF_T8] = (val < 0);
-    user->regs[EF_V0] = val;
+    user->regs.regs[REG_V0] = val;
+    user->regs.regs[REG_T8] = (val < 0);
 }
 
 static int process_is_stopped(pid_t pid)
@@ -256,13 +252,12 @@ out_ptrace:
 
 static inline unsigned long __remote_syscall(pid_t pid,
 	int syscall_no, char *syscall_name,
-	int use_o0, unsigned long o0,
-	int use_o1, unsigned long o1,
-	int use_o2, unsigned long o2,
-	int use_o3, unsigned long o3,
-	int use_o4 , unsigned long o4 )
+	int use_a1, unsigned long a1,
+	int use_a2, unsigned long a2,
+	int use_a3, unsigned long a3,
+	int use_a4, unsigned long a4,
+	int use_a5, unsigned long a5 )
 {
-#if 0
     struct registers orig_regs, regs;
     unsigned long ret;
     int status;
@@ -277,15 +272,15 @@ static inline unsigned long __remote_syscall(pid_t pid,
 
     memcpy(&regs, &orig_regs, sizeof(regs));
 
-    regs.u_regs[UREG_G1] = syscall_no;
-    if (use_o0) regs.u_regs[UREG_I0] = o0;
-    if (use_o1) regs.u_regs[UREG_I1] = o1;
-    if (use_o2) regs.u_regs[UREG_I2] = o2;
-    if (use_o3) regs.u_regs[UREG_I3] = o3;
-    if (use_o4) regs.u_regs[UREG_I4] = o4;
+    regs.regs[REG_V0] = syscall_no;
+    if (use_a1) regs.regs[REG_A0] = a1;
+    if (use_a2) regs.regs[REG_A1] = a2;
+    if (use_a3) regs.regs[REG_A2] = a3;
+    if (use_a4) regs.regs[REG_A3] = a4;
+    if (use_a5) regs.regs[REG_A4] = a5;
 
     /* Set up registers for ptrace syscall */
-    regs.pc = syscall_loc;
+    regs.regs[REG_PC] = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
@@ -308,13 +303,12 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if ((signed long)regs.u_regs[UREG_I0] < 0) {
-	errno = -regs.u_regs[UREG_I0];
+    if ((signed long)regs.regs[REG_A3]) {
+	errno = -regs.regs[REG_V0];
 	return -1;
     }
 
-    return regs.u_regs[UREG_I0];
-#endif
+    return regs.regs[REG_V0];
 }
 
 #define __rsyscall0(type,name) \

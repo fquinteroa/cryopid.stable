@@ -18,7 +18,7 @@ static void load_chunk_regs(struct user *user, int stopped)
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
     cp = code;
-    data = (long*)(code + (PAGE_SIZE >> 4)); /* PAGE_SIZE/2 in longs */
+    data = (long*)(code + (PAGE_SIZE >> 1)); /* PAGE_SIZE/2 in longs */
 
     /* put return dest onto stack too */
     //r->r_o6-=8;
@@ -45,27 +45,42 @@ static void load_chunk_regs(struct user *user, int stopped)
     }
 
     /* restore registers */
-    /*
-    *cp++=0x49; *cp++=0xbf; *(long*)(cp) = r->r15; cp+=8;
-    *cp++=0x49; *cp++=0xbe; *(long*)(cp) = r->r14; cp+=8;
-    *cp++=0x49; *cp++=0xbd; *(long*)(cp) = r->r13; cp+=8;
-    *cp++=0x49; *cp++=0xbc; *(long*)(cp) = r->r12; cp+=8;
-    *cp++=0x48; *cp++=0xbd; *(long*)(cp) = r->rbp; cp+=8;
-    *cp++=0x48; *cp++=0xbb; *(long*)(cp) = r->rbx; cp+=8;
-    *cp++=0x49; *cp++=0xbb; *(long*)(cp) = r->r11; cp+=8;
-    *cp++=0x49; *cp++=0xba; *(long*)(cp) = r->r10; cp+=8;
-    *cp++=0x49; *cp++=0xb9; *(long*)(cp) = r->r9;  cp+=8;
-    *cp++=0x49; *cp++=0xb8; *(long*)(cp) = r->r8;  cp+=8;
-    *cp++=0x48; *cp++=0xb8; *(long*)(cp) = r->rax; cp+=8;
-    *cp++=0x48; *cp++=0xb9; *(long*)(cp) = r->rcx; cp+=8;
-    *cp++=0x48; *cp++=0xba; *(long*)(cp) = r->rdx; cp+=8;
-    *cp++=0x48; *cp++=0xbe; *(long*)(cp) = r->rsi; cp+=8;
-    *cp++=0x48; *cp++=0xbf; *(long*)(cp) = r->rdi; cp+=8;
-    *cp++=0x48; *cp++=0xbc; *(long*)(cp) = r->rsp; cp+=8;
-    */
+    *++data=user->regs.regs[REG_V0]; *cp++=0xa41f0000|(long)data;
+    *++data=user->regs.regs[REG_T0]; *cp++=0xa43f0000|(long)data;
+    *++data=user->regs.regs[REG_T1]; *cp++=0xa45f0000|(long)data;
+    *++data=user->regs.regs[REG_T2]; *cp++=0xa47f0000|(long)data;
+    *++data=user->regs.regs[REG_T3]; *cp++=0xa49f0000|(long)data;
+    *++data=user->regs.regs[REG_T4]; *cp++=0xa4bf0000|(long)data;
+    *++data=user->regs.regs[REG_T5]; *cp++=0xa4df0000|(long)data;
+    *++data=user->regs.regs[REG_T6]; *cp++=0xa4ff0000|(long)data;
+    *++data=user->regs.regs[REG_T7]; *cp++=0xa51f0000|(long)data;
+    *++data=user->regs.regs[REG_S0]; *cp++=0xa53f0000|(long)data;
+    *++data=user->regs.regs[REG_S1]; *cp++=0xa55f0000|(long)data;
+    *++data=user->regs.regs[REG_S2]; *cp++=0xa57f0000|(long)data;
+    *++data=user->regs.regs[REG_S3]; *cp++=0xa59f0000|(long)data;
+    *++data=user->regs.regs[REG_S4]; *cp++=0xa5bf0000|(long)data;
+    *++data=user->regs.regs[REG_S5]; *cp++=0xa5df0000|(long)data;
+    *++data=user->regs.regs[REG_S6]; *cp++=0xa5ff0000|(long)data;
+    *++data=user->regs.regs[REG_A0]; *cp++=0xa61f0000|(long)data;
+    *++data=user->regs.regs[REG_A1]; *cp++=0xa63f0000|(long)data;
+    *++data=user->regs.regs[REG_A2]; *cp++=0xa65f0000|(long)data;
+    *++data=user->regs.regs[REG_A3]; *cp++=0xa67f0000|(long)data;
+    *++data=user->regs.regs[REG_A4]; *cp++=0xa69f0000|(long)data;
+    *++data=user->regs.regs[REG_A5]; *cp++=0xa6bf0000|(long)data;
+    *++data=user->regs.regs[REG_T8]; *cp++=0xa6df0000|(long)data;
+    *++data=user->regs.regs[REG_T9]; *cp++=0xa6ff0000|(long)data;
+    *++data=user->regs.regs[REG_T10];*cp++=0xa71f0000|(long)data;
+    *++data=user->regs.regs[REG_T11];*cp++=0xa73f0000|(long)data;
+    *++data=user->regs.regs[REG_RA]; *cp++=0xa75f0000|(long)data;
+    *++data=user->regs.regs[REG_T12];*cp++=0xa77f0000|(long)data;
+    *++data=user->regs.regs[REG_AT]; *cp++=0xa79f0000|(long)data;
+    *++data=user->regs.regs[REG_GP]; *cp++=0xa7bf0000|(long)data;
+    *++data=user->regs.regs[REG_SP]; *cp++=0xa7df0000|(long)data;
 
     /* jump back to where we were. */
-    *cp++=0xc3;
+    /* FIXME: We clobber T11 irrecovereably. Could cause apps to die */
+    *++data=user->regs.regs[REG_PC];*cp++=0xa73f0000|(long)data;
+    *cp++=0x6bf90000; /* jmp (t11) */
 }
 
 void read_chunk_regs(void *fptr, int action)

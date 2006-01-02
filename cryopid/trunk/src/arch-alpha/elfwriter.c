@@ -143,7 +143,7 @@ void write_stub(int fd, long offset)
 	    }
 
 	    s->sh_info = IMAGE_VERSION;
-	    *(long*)(stub_start+s->sh_offset) = stub_size;
+	    memcpy(stub_start+s->sh_offset, &stub_size, sizeof(stub_size));
 	    got_it = 1;
 	}
     }

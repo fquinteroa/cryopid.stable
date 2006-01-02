@@ -16,17 +16,20 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
     user_data = xmalloc(sizeof(struct user));
     user_data_ptr = (long*)user_data;
 
-    /* Get the user struct of the process */
-    for(pos = 0; pos < sizeof(struct user)/sizeof(long); pos++) {
+    /* Get the registers of the process */
+    for(pos = 0; pos < sizeof(user_data->regs.regs)/sizeof(long); pos++) {
 	user_data_ptr[pos] =
-	    ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*sizeof(long)), NULL);
+	    ptrace(PTRACE_PEEKUSER, pid, pos, NULL);
 	if (errno != 0) {
 	    perror("ptrace(PTRACE_PEEKUSER)");
 	}
     }
 
-    for (pos = 0; pos < sizeof(user_data->regs)/sizeof(user_data->regs[0]); pos++)
-	printf("Reg %ld: 0x%lx\n", pos, user_data->regs[pos]);
+#if 0
+    for (pos = 0; pos < sizeof(user_data->regs.regs)/sizeof(user_data->regs.regs[0]);
+	    pos++)
+	printf("Reg %ld: 0x%lx\n", pos, user_data->regs.regs[pos]);
+#endif
 
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, user_data)) {
