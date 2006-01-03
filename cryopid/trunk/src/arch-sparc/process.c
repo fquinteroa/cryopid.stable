@@ -131,7 +131,7 @@ int is_in_syscall(pid_t pid, struct regs *regs)
 {
     long inst;
     /* FIXME npc or pc? see esky? */
-    inst = ptrace(PTRACE_PEEKDATA, pid, regs->r_npc-4, 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, regs->r_pc-4, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
@@ -142,7 +142,7 @@ int is_in_syscall(pid_t pid, struct regs *regs)
 void set_syscall_return(struct regs* regs, unsigned long val) {
     regs->r_o0 = val;
     if (val > (unsigned long)-255)
-	regs->r_psr &= PSR_C;
+	regs->r_psr |= PSR_C;
 }
 
 static int process_is_stopped(pid_t pid)
