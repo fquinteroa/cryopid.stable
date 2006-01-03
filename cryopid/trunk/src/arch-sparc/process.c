@@ -97,28 +97,18 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
     return 1;
 }
 
-static int save_registers(pid_t pid, struct pt_regs *r)
+static int save_registers(pid_t pid, struct regs *r)
 {
-    int i;
     if (ptrace(PTRACE_GETREGS, pid, r, NULL) < 0) {
 	perror("ptrace getregs");
 	return -errno;
     }
-    for (i = 15; i > 0; i--)
-	r->u_regs[i] = r->u_regs[i-1];
     return 0;
 }
 
-static int restore_registers(pid_t pid, struct pt_regs *r)
+static int restore_registers(pid_t pid, struct regs *r)
 {
-    int i;
-    struct pt_regs nr;
-
-    memcpy(&nr, r, sizeof(nr));
-    for (i = 1; i < 16; i++)
-	nr.u_regs[i-1] = nr.u_regs[i];
-
-    if (ptrace(PTRACE_SETREGS, pid, &nr, NULL) < 0) {
+    if (ptrace(PTRACE_SETREGS, pid, r, NULL) < 0) {
 	perror("ptrace setregs");
 	return -errno;
     }
@@ -137,11 +127,11 @@ int is_a_syscall(unsigned long inst, int canonical)
     return 0;
 }
 
-int is_in_syscall(pid_t pid, struct user *user)
+int is_in_syscall(pid_t pid, struct regs *regs)
 {
     long inst;
     /* FIXME npc or pc? see esky? */
-    inst = ptrace(PTRACE_PEEKDATA, pid, user->regs.npc-4, 0);
+    inst = ptrace(PTRACE_PEEKDATA, pid, regs->r_npc-4, 0);
     if (errno) {
 	perror("ptrace(PEEKDATA)");
 	return 0;
@@ -149,9 +139,10 @@ int is_in_syscall(pid_t pid, struct user *user)
     return is_a_syscall(inst, 0);
 }
 
-void set_syscall_return(struct user* user, unsigned long val) {
-    /* FIXME - set carry bit on error */
-    user->regs.regs[7] = val;
+void set_syscall_return(struct regs* regs, unsigned long val) {
+    regs->r_o0 = val;
+    if (val > (unsigned long)-255)
+	regs->r_psr &= PSR_C;
 }
 
 static int process_is_stopped(pid_t pid)
@@ -212,7 +203,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 {
     int success = 0;
     char* pagebackup;
-    struct pt_regs r;
+    struct regs r;
 
     start_ptrace(pid);
 
@@ -222,7 +213,7 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     }
 
     extern unsigned long mysp;
-    mysp = r.u_regs[UREG_I6];
+    mysp = r.r_o6;
 
     /* The order below is very important. Do not change without good reason and
      * careful thought.
@@ -264,7 +255,7 @@ static inline unsigned long __remote_syscall(pid_t pid,
 	int use_o3, unsigned long o3,
 	int use_o4, unsigned long o4)
 {
-    struct pt_regs orig_regs, regs;
+    struct regs orig_regs, regs;
     unsigned long ret;
     int status;
 
@@ -278,16 +269,17 @@ static inline unsigned long __remote_syscall(pid_t pid,
 
     memcpy(&regs, &orig_regs, sizeof(regs));
 
-    regs.u_regs[UREG_G1] = syscall_no;
-    if (use_o0) regs.u_regs[UREG_I0] = o0;
-    if (use_o1) regs.u_regs[UREG_I1] = o1;
-    if (use_o2) regs.u_regs[UREG_I2] = o2;
-    if (use_o3) regs.u_regs[UREG_I3] = o3;
-    if (use_o4) regs.u_regs[UREG_I4] = o4;
+    regs.r_g1 = syscall_no;
+    if (use_o0) regs.r_o0 = o0;
+    if (use_o1) regs.r_o1 = o1;
+    if (use_o2) regs.r_o2 = o2;
+    if (use_o3) regs.r_o3 = o3;
+    if (use_o4) regs.r_o4 = o4;
+    regs.r_psr = 0; /* specifically to clear the carry bit */
     
     /* Set up registers for ptrace syscall */
-    regs.pc = syscall_loc;
-    regs.npc = syscall_loc;
+    regs.r_pc = syscall_loc;
+    regs.r_npc = syscall_loc;
     if (restore_registers(pid, &regs) < 0)
 	abort();
 
@@ -335,15 +327,15 @@ static inline unsigned long __remote_syscall(pid_t pid,
     if (restore_registers(pid, &orig_regs) < 0)
 	abort();
 
-    if (regs.psr & PSR_C) { /* error */
-	errno = regs.u_regs[UREG_I0];
+    if (regs.r_psr & PSR_C) { /* error */
+	errno = regs.r_o0;
 	// fprintf(stderr, "syscall %s returns error %s\n", syscall_name, strerror(errno));
 	return -1;
     }
 
     errno = 0;
     // fprintf(stderr, "syscall %s returns %ld\n", syscall_name, regs.u_regs[UREG_I0]);
-    return regs.u_regs[UREG_I0];
+    return regs.r_o0;
 }
 
 #define __rsyscall0(type,name) \

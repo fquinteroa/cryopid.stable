@@ -1,7 +1,7 @@
 #include <bits/types.h>
-#include <linux/user.h>
 #include <linux/unistd.h>
 #include <sys/ptrace.h>
+#include <asm/reg.h>
 
 #include "cpimage.h"
 #include "cryopid.h"
@@ -12,41 +12,40 @@ unsigned long mysp;
 void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 {
     struct cp_chunk *chunk = NULL;
-    struct user *user_data;
-    long pos;
-    long* user_data_ptr;
+    struct regs *user_data;
     struct cp_sparc_window_regs *or = xmalloc(sizeof(struct cp_sparc_window_regs));
 
-    user_data = xmalloc(sizeof(struct user));
-    user_data_ptr = (long*)user_data;
+    user_data = xmalloc(sizeof(struct regs));
 
-    /* Get the user struct of the process */
-    for(pos = 0; pos < sizeof(struct user)/sizeof(long); pos++) {
-	user_data_ptr[pos] = ptrace(PTRACE_PEEKUSER, pid, (void*)(pos*sizeof(long)), 0);
-	if (errno != 0) {
-	    perror("ptrace(PTRACE_PEEKUSER): ");
-	}
+    /* Get the registers of the process */
+    if (ptrace(PTRACE_GETREGS, pid, user_data, NULL) < 0) {
+	perror("ptrace getregs");
+	abort();
     }
 
-    debug("SP is 0x%lx\n", user_data->regs.regs[13]);
+    debug("SP is 0x%lx\n", user_data->r_o6);
 
     debug("PC: 0x%08lx nPC: 0x%08lx PSR: 0x%08lx Y: 0x%08lx",
-	    user_data->regs.pc, user_data->regs.npc,
-	    user_data->regs.psr, user_data->regs.y);
+	    user_data->r_pc,  user_data->r_npc,
+	    user_data->r_psr, user_data->r_y);
     debug("G:            0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
-	    user_data->regs.regs[1], user_data->regs.regs[2],
-	    user_data->regs.regs[3], user_data->regs.regs[4],
-	    user_data->regs.regs[5], user_data->regs.regs[6],
-	    user_data->regs.regs[7]);
+	    user_data->r_g1, user_data->r_g2, user_data->r_g3, user_data->r_g4,
+	    user_data->r_g5, user_data->r_g6, user_data->r_g7);
 
     debug("O: 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
-	    user_data->regs.regs[8], user_data->regs.regs[9],
-	    user_data->regs.regs[10], user_data->regs.regs[11],
-	    user_data->regs.regs[12], user_data->regs.regs[13],
-	    user_data->regs.regs[14], user_data->regs.regs[15]);
+	    user_data->r_o0, user_data->r_o1, user_data->r_o2, user_data->r_o3,
+	    user_data->r_o4, user_data->r_o5, user_data->r_o6, user_data->r_o7);
 
     /* Get the other regs off the stack */
-    memcpy_from_target(pid, or, mysp, sizeof(or));
+    memcpy_from_target(pid, or, user_data->r_o6, sizeof(*or));
+
+    debug("L: 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
+	    or->r_l0, or->r_l1, or->r_l2, or->r_l3,
+	    or->r_l4, or->r_l5, or->r_l6, or->r_l7);
+
+    debug("I: 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx 0x%08lx",
+	    or->r_i0, or->r_i1, or->r_i2, or->r_i3,
+	    or->r_i4, or->r_i5, or->r_i6, or->r_i7);
 
     /* Restart a syscall on the other side */
     if (is_in_syscall(pid, user_data)) {
@@ -64,7 +63,7 @@ void fetch_chunks_regs(pid_t pid, int flags, struct list *l, int stopped)
 
 void write_chunk_regs(void *fptr, struct cp_regs *data)
 {
-    write_bit(fptr, data->user_data, sizeof(struct user));
+    write_bit(fptr, data->user_data, sizeof(struct regs));
     write_bit(fptr, &data->stopped, sizeof(int));
     write_bit(fptr, data->opaque, sizeof(struct cp_sparc_window_regs));
 }

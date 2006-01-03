@@ -9,19 +9,21 @@
 #include "cpimage.h"
 #include "cryopid.h"
 
-static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, int stopped)
+static void load_chunk_regs(struct regs *r, struct cp_sparc_window_regs *or, int stopped)
 {
     long *p = (long*)TRAMPOLINE_ADDR;
     char *code = (char*)TRAMPOLINE_ADDR;
-    struct regs *r = (struct regs*)&user->regs;
 
     /* Create region for mini-resumer process. */
     syscall_check(
 	(long)mmap((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC,
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
-    /* Flush windows */
-    *p++=0x91d02003;                                      /* t 0x03           */
+    /* SP must be loaded atomically */
+    *(long*)(code+0xff8) = r->r_o6;
+    *p++=0x91d02003; /* ta 0x03           */
+    *p++=0xdc002ff8; /* ld [ 0xff8 ], %o6 */
+    *p++=0x91d02003; /* ta 0x03           */
 
     /* munmap our custom malloc space */
     *p++=0x82102000 | __NR_munmap;                        /* mov foo, %g1     */
@@ -64,13 +66,11 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
     *p++=0x17000000 | HIB(r->r_o3); *p++=0x9612e000 | LOB(r->r_o3);
     *p++=0x19000000 | HIB(r->r_o4); *p++=0x98132000 | LOB(r->r_o4);
     *p++=0x1b000000 | HIB(r->r_o5); *p++=0x9a136000 | LOB(r->r_o5);
-    /* SP must be loaded atomically */
-    *(long*)(code+0xff8) = r->r_o6;
-    *p++=0xdc002ff8; /* ld [ 0xff8 ], %o6 */
     //*p++=0x1d000000 | HIB(r->r_o6); *p++=0x9c13a000 | LOB(r->r_o6);
     *(long*)(code+0xffc) = r->r_o7; /* used for the jmp. save him for later. */
-    *p++=0x1f000000 | HIB(r->r_npc); *p++=0x9e13e000 | LOB(r->r_npc);
+    *p++=0x1f000000 | HIB(r->r_pc); *p++=0x9e13e000 | LOB(r->r_pc);
 
+#if 1
     *p++=0x21000000 | HIB(or->r_l0); *p++=0xa0142000 | LOB(or->r_l0);
     *p++=0x23000000 | HIB(or->r_l1); *p++=0xa2146000 | LOB(or->r_l1);
     *p++=0x25000000 | HIB(or->r_l2); *p++=0xa414a000 | LOB(or->r_l2);
@@ -88,6 +88,7 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
     *p++=0x3b000000 | HIB(or->r_i5); *p++=0xba176000 | LOB(or->r_i5);
     *p++=0x3d000000 | HIB(or->r_i6); *p++=0xbc17a000 | LOB(or->r_i6);
     *p++=0x3f000000 | HIB(or->r_i7); *p++=0xbe17e000 | LOB(or->r_i7);
+#endif
 
     /* jump back to where we were. */
     *p++=0x81c3c000; /* jmp %o7, %g0 */
@@ -96,16 +97,16 @@ static void load_chunk_regs(struct user *user, struct cp_sparc_window_regs *or, 
 
 void read_chunk_regs(void *fptr, int action)
 {
-    struct user user;
+    struct regs regs;
     struct cp_sparc_window_regs or;
     int stopped;
-    read_bit(fptr, &user, sizeof(struct user));
+    read_bit(fptr, &regs, sizeof(struct regs));
     read_bit(fptr, &stopped, sizeof(int));
     read_bit(fptr, &or, sizeof(struct cp_sparc_window_regs));
-    /*
     if (action & ACTION_PRINT) {
 	fprintf(stderr, "(registers): Process was %sstopped\n",
 		stopped?"":"not ");
+    /*
 	fprintf(stderr, "\teax: 0x%08lx ebx: 0x%08lx ecx: 0x%08lx edx: 0x%08lx\n",
 		user.regs.eax, user.regs.ebx, user.regs.ecx, user.regs.edx);
 	fprintf(stderr, "\tesi: 0x%08lx edi: 0x%08lx ebp: 0x%08lx esp: 0x%08lx\n",
@@ -114,10 +115,10 @@ void read_chunk_regs(void *fptr, int action)
 		user.regs.ds, user.regs.es, user.regs.fs, user.regs.gs);
 	fprintf(stderr, "\teip: 0x%08lx eflags: 0x%08lx",
 		user.regs.eip, user.regs.eflags);
-    }
     */
+    }
     if (action & ACTION_LOAD)
-	load_chunk_regs(&user, &or, stopped);
+	load_chunk_regs(&regs, &or, stopped);
 }
 
 /* vim:set ts=8 sw=4 noet: */
