@@ -9,8 +9,8 @@
 #include "cpimage.h"
 
 int is_a_syscall(unsigned long inst, int canonical);
-int is_in_syscall(pid_t pid, struct user *user);
-void set_syscall_return(struct user* user, unsigned long val);
+int is_in_syscall(pid_t pid, void* user);
+void set_syscall_return(void* user, unsigned long val);
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
 int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
 

@@ -59,7 +59,7 @@ struct cp_misc {
 };
 
 struct cp_regs {
-    struct user *user_data;
+    void *user_data; /* typically a struct user, or registers */
     void *opaque; /* For arch-specific data */
     int stopped;
 };
