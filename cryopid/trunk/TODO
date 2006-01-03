@@ -105,8 +105,8 @@
 --- Architectures:
 + x86
 + x86_64
-- ppc
-- sparc
++ ppc
++ sparc
 - alpha
 
 vim:ft=diff
