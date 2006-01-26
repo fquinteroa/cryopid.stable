@@ -1,5 +1,7 @@
+#define _LARGEFILE64_SOURCE
 #include <inttypes.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -75,6 +77,7 @@ int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n)
     return 1;
 }
 
+#if 0
 int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
 {
     /* just like memcpy, but copies it from the space of the target pid */
@@ -93,6 +96,38 @@ int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
     }
     return 1;
 }
+#else
+int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n)
+{
+    /* just like memcpy, but copies it from the space of the target pid */
+    /* n must be a multiple of 4, or will otherwise be rounded down to be so */
+    int i;
+    char s[32];
+    int fd;
+    off64_t off;
+    snprintf(s, sizeof(s), "/proc/%d/mem", pid);
+    off = (off64_t)(unsigned long)src;
+    if ((fd = open(s, O_RDONLY)) == -1) {
+	perror("open");
+	abort();
+    }
+    if (lseek64(fd, off, SEEK_SET) == -1) {
+	perror("lseek");
+	abort();
+    }
+    i = read(fd, dest, n);
+    if (i == -1) {
+	perror("read");
+	abort();
+    }
+    if (i < n) {
+	fprintf(stderr, "Short read!\n");
+	abort();
+    }
+    close(fd);
+    return 1;
+}
+#endif
 
 static int save_registers(pid_t pid, struct user_regs_struct *r)
 {
