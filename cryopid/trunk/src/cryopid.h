@@ -20,9 +20,7 @@
 		abort(); \
 	}
 
-#ifdef assert
 #undef assert
-#endif
 #define assert(x) \
 	if (!(x)) { \
 	    fprintf(stderr, "Assertion failed in %s (%s:%d)\n", __FUNCTION__, \
@@ -30,14 +28,23 @@
 	    abort(); \
 	}
 
+#define xmalloc(size) \
+    (malloc(size) ? : ((bail("Out of memory (%s:%d)!", __FILE__, __LINE__)),NULL))
+
+#define xtalloc(ctx, type) \
+    (talloc((ctx), (type)) ? : (bail("Out of memory (%s:%d)!", __FILE__, __LINE__)))
+#define xtalloc_size(ctx, size) \
+    (talloc((ctx), (size)) ? : (bail("Out of memory (%s:%d)!", __FILE__, __LINE__)))
+
+#define xfree(x) do { } while(0)
+#define xtalloc_free talloc_free
+
 /* elfwriter.c */
 void write_stub(int fd, long offset);
 
 /* common.c */
 long syscall_check(int retval, int can_be_fake, char* desc, ...);
 void safe_read(int fd, void* dest, size_t count, char* desc);
-void *xmalloc(int len);
-void xfree(void* p);
 unsigned int checksum(char *ptr, int len, unsigned int start);
 
 /* netclient.c */

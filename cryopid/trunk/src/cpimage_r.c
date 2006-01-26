@@ -54,7 +54,7 @@ char *read_string(void *fptr, char *buf, int maxlen)
 	bail("String longer than expected!");
 
     if (!buf)
-	buf = malloc(len+1);
+	buf = xmalloc(len+1);
 
     read_bit(fptr, buf, len);
     buf[len] = '\0';

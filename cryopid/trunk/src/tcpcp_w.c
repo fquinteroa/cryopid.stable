@@ -62,7 +62,7 @@ void *tcpcp_get(pid_t pid, int s)
     if (tcp_max_ici_size(pid, s, &size) < 0)
 	return NULL;
 
-    ici = malloc(size);
+    ici = xmalloc(size);
     if (!ici)
 	return NULL;
 

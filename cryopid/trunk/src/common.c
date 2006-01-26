@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <asm/page.h>
 
+#include "talloc.h"
 #include "cryopid.h"
 
 long syscall_check(int retval, int can_be_fake, char* desc, ...)
@@ -75,7 +76,6 @@ static void cp_free_hook(void *ptr, const void *caller)
 
 #ifdef PROVIDE_MALLOC
 /* We provide malloc() and free() */
-
 void *malloc(size_t size) { return cp_malloc_hook(size, NULL); }
 void free(void *mem) { return cp_free_hook(mem, NULL); }
 
@@ -97,20 +97,6 @@ static void cp_malloc_init_hook()
 #endif /* PROVIDE_MALLOC */
 
 #endif /* COMPILING_STUB */
-
-void *xmalloc(int len)
-{
-    void *p;
-    p = malloc(len);
-    if (!p)
-	    bail("Out of memory!");
-    return p;
-}
-
-void xfree(void *p)
-{
-    free(p);
-}
 
 unsigned int checksum(char *ptr, int len, unsigned int start)
 {

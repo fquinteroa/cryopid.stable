@@ -47,7 +47,7 @@ W_CHUNK_OBJS += cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_f
 COMMON_OBJS = common.c arch/asmfuncs.o
 STUB_TYPES = raw # gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
-TARGETS = freeze fork2_helper cryopid-server
+TARGETS = freeze fork2_helper cryopid-server $(STUBS)
 
 # How do we get our libc linked into the stub?
 LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a -lgcc
