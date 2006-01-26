@@ -19,6 +19,9 @@
 
 extern struct stream_ops *stream_ops;
 
+int target_network = 0;
+char *target_host = NULL;
+
 void usage(char* argv0)
 {
     fprintf(stderr,
@@ -34,6 +37,8 @@ void usage(char* argv0)
 "    -f      Save the contents of open files into the image.\n"
 "    -c      Save children of this process as well.\n"
 */
+"    -n hostname\n"
+"            Send over the network to the given host.\n"
 "\n"
 "This program is part of CryoPID %s. http://cryopid.berlios.de/\n",
     argv0, CRYOPID_VERSION);
@@ -63,7 +68,7 @@ int main(int argc, char** argv)
 	    {0, 0, 0, 0},
 	};
 
-	c = getopt_long(argc, argv, "lk"/*"fcw:"*/, long_options, &option_index);
+	c = getopt_long(argc, argv, "lkn:"/*"fcw:"*/, long_options, &option_index);
 	if (c == -1)
 	    break;
 	switch(c) {
@@ -84,6 +89,10 @@ int main(int argc, char** argv)
 		set_writer(optarg);
 		break;
 		*/
+	    case 'n':
+		target_network = 1;
+		target_host = strdup(optarg);
+		break;
 	    case '?':
 		/* invalid option */
 		usage(argv[0]);
@@ -107,14 +116,22 @@ int main(int argc, char** argv)
     list_init(proc_image);
     get_process(target_pid, flags, &proc_image, &offset);
 
-    fd = open(argv[optind], O_CREAT|O_WRONLY|O_TRUNC, 0777);
-    if (fd == -1) {
-	fprintf(stderr, "Couldn't open %s for writing: %s\n", argv[optind],
-	    strerror(errno));
-	return 1;
-    }
+    if (target_network) {
+	fd = connect_to_host(target_host);
+	if (fd == -1) {
+	    /* connect_to_host() complained for us */
+	    return 1;
+	}
+    } else {
+	fd = open(argv[optind], O_CREAT|O_WRONLY|O_TRUNC, 0777);
+	if (fd == -1) {
+	    fprintf(stderr, "Couldn't open %s for writing: %s\n", argv[optind],
+		strerror(errno));
+	    return 1;
+	}
 
-    write_stub(fd, offset);
+	write_stub(fd, offset);
+    }
 
     write_process(fd, proc_image);
 

@@ -13,7 +13,7 @@
 
 char tramp[100];
 extern char tramp[] __attribute__((__section__((".tramp"))));
-static int image_fd, real_fd;
+static int image_fd, self_fd;
 
 int verbosity = 0;
 int dump_only = 0;
@@ -21,6 +21,7 @@ int action = ACTION_LOAD;
 int want_pid = 0;
 int do_pause = 0;
 int reforked = 0;
+int networked = 0;
 
 int real_argc;
 char** real_argv;
@@ -104,18 +105,17 @@ void real_main(int argc, char** argv)
     /* See if we're being executed for the second time. If so, read arguments
      * from the file.
      */
-    if (lseek(image_fd, 0, SEEK_SET) != -1) {
-	safe_read(image_fd, &argc, sizeof(argc), "argc from cryopid.state");
+    if (read(image_fd, &argc, sizeof(argc)) != -1) {
 	argv = (char**)xmalloc(sizeof(char*)*argc+1);
 	argv[argc] = NULL;
 	int i, len;
 	for (i=0; i < argc; i++) {
 	    safe_read(image_fd, &len, sizeof(len), "argv len from cryopid.state");
-	    argv[i] = (char*)xmalloc(len);
+	    argv[i] = (char*)xmalloc(len+1);
 	    safe_read(image_fd, argv[i], len, "new argv from cryopid.state");
+	    argv[i][len] = '\0';
 	}
-	close(image_fd);
-	reforked = 1;
+	argv[i] = NULL;
     } else {
 	if (errno && errno != EBADF) {
 	    /* EBADF is the only error we should be expecting! */
@@ -133,7 +133,7 @@ void real_main(int argc, char** argv)
 	    {0, 0, 0, 0},
 	};
 	
-	c = getopt_long(argc, argv, "dvpPg",
+	c = getopt_long(argc, argv, "dvpPgn",
 		long_options, &option_index);
 	if (c == -1)
 	    break;
@@ -152,6 +152,9 @@ void real_main(int argc, char** argv)
 	    case 'P':
 		want_pid = 1;
 		break;
+	    case 'n':
+		networked = 1;
+		break;
 #ifdef USE_GTK
 	    case 'g':
 		gtk_can_close_displays = 1;
@@ -169,8 +172,13 @@ void real_main(int argc, char** argv)
 	usage(argv[0]);
     }
 
-    image_fd = real_fd;
-    seek_to_image(image_fd);
+    if (!networked) {
+	image_fd = self_fd;
+	seek_to_image(image_fd);
+    } else {
+	close(self_fd);
+    }
+    /* a network image just follows immediately after the cmdline options */
 
     read_process();
 
@@ -214,7 +222,7 @@ int main(int argc, char**argv, char **envp)
     *real_environ = NULL;
     environ = real_environ;
 
-    real_fd = open_self();
+    self_fd = open_self();
     relocate_stack();
 
     /* Now hope for the best! */

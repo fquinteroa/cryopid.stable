@@ -43,11 +43,11 @@ CFLAGS += -DARCH_HAS_ALIGNED_INSTRUCTIONS
 endif
 
 R_CHUNK_OBJS += cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_header.o arch/arch_r_objs.o fork2.o
-W_CHUNK_OBJS += cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_fifo.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o cp_w_header.o arch/arch_w_objs.o list.o 
+W_CHUNK_OBJS += cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_fifo.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o cp_w_header.o arch/arch_w_objs.o list.o netclient.o
 COMMON_OBJS = common.c arch/asmfuncs.o
-STUB_TYPES = gzip # raw buffered lzo
+STUB_TYPES = raw # gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))
-TARGETS = freeze fork2_helper
+TARGETS = freeze fork2_helper cryopid-server
 
 # How do we get our libc linked into the stub?
 LIBC = -DPROVIDE_MALLOC -nostdlib -nostartfiles ../dietlibc-$(ARCH)/dietlibc.a -lgcc
@@ -98,9 +98,12 @@ freeze: $(COMMON_OBJS) $(W_CHUNK_OBJS) freeze.o $(patsubst %,stub-image-%.o,$(ST
 	$(CC) $(CFLAGS) -Os -o $@ $^ -lz
 
 gtk_support.o: gtk_support.c
-	$(CC) $(CFLAGS) -I/usr/include/gtk-2.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/pango-1.0 -I/usr/lib/gtk-2.0/include -I/usr/include/atk-1.0 -c $<
+	$(CC) $(CFLAGS) -I/usr/include/gtk-2.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/pango-1.0 -I/usr/lib/gtk-2.0/include -I/usr/include/atk-1.0 -I/usr/include/cairo -c $<
 
 fork2_helper: fork2_helper.c
+	$(CC) $(CFLAGS) $< -o $@
+
+cryopid-server: netserver.o stub-raw 
 	$(CC) $(CFLAGS) $< -o $@
 
 .PHONY: arch

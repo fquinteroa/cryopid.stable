@@ -40,6 +40,9 @@ void *xmalloc(int len);
 void xfree(void* p);
 unsigned int checksum(char *ptr, int len, unsigned int start);
 
+/* netclient.c */
+int connect_to_host(char *host);
+
 /* writer_raw.c */
 extern struct stream_ops raw_ops;
 
