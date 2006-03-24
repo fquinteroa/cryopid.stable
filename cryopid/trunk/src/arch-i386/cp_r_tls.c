@@ -1,10 +1,10 @@
+#include <sys/ptrace.h>
 #include <linux/user.h>
 #include <linux/unistd.h>
 #include <signal.h>
 #include <asm/ldt.h>
 #include <asm/ucontext.h>
 #include <sys/mman.h>
-#include <sys/ptrace.h>
 #include <linux/ptrace.h>
 #include <string.h>
 #include <errno.h>
