@@ -19,6 +19,7 @@
 #define PROTO_TCP	6
 #define PROTO_UDP	17
 #define PROTO_X		666
+#define PROTO_ICE	667
 
 struct unix_sock_info_t {
     int listening;
@@ -191,6 +192,8 @@ static int get_unix_socket(struct cp_socket_unix *u, pid_t pid, int fd,
 	xsocket = 0;
     if (xsocket)
 	return PROTO_X;
+    if (strstr(u->peername.sun_path, ".ICE-unix"))
+	return PROTO_ICE;
 #endif
 
     debug("fd %d (ino %d): UNIX socket connected from %s to %s (listening: %d)",

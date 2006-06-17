@@ -15,6 +15,7 @@
 #define PROTO_TCP	6
 #define PROTO_UDP	17
 #define PROTO_X		666
+#define PROTO_ICE	667
 
 static void read_chunk_fd_socket_tcp(void *fptr, int fd, struct cp_socket_tcp *tcp,
 	int action)
@@ -108,6 +109,29 @@ static void read_chunk_fd_socket_x(void *fptr, int fd, int action)
     }
 }
 
+static void read_chunk_fd_socket_ice(void *fptr, int fd, int action)
+{
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "ICE socket ");
+
+    if (action & ACTION_LOAD) {
+#ifdef USE_GTK
+	int sp[2];
+	socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
+	if (!sys_clone(0, 0)) { /* don't give parent notification on exit */
+	    extern void ice_responder(int);
+	    close(sp[1]);
+	    ice_responder(sp[0]);
+	} else
+	    close(sp[0]);
+	if (sp[1] != fd) {
+	    dup2(sp[1], fd);
+	    close(sp[1]);
+	}
+#endif
+    }
+}
+
 void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)
 {
     read_bit(fptr, &fd->socket.proto, sizeof(int));
@@ -120,6 +144,9 @@ void read_chunk_fd_socket(void *fptr, struct cp_fd *fd, int action)
 	    break;
 	case PROTO_X:
 	    read_chunk_fd_socket_x(fptr, fd->fd, action);
+	    break;
+	case PROTO_ICE:
+	    read_chunk_fd_socket_ice(fptr, fd->fd, action);
 	    break;
 	case PROTO_UDP:
 	default:

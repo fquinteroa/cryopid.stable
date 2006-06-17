@@ -124,4 +124,17 @@ void x_responder(int fd) {
     _exit(0);
 }
 
+void ice_responder(int fd) {
+    char buf[4096];
+    int len;
+    unsigned short seq = 0;
+    static char reply[] =
+	"\1\1\0\0\0\0\0\0<\0`\3\4\0\0\0\0\0\0\0\360R\214\3\210\357\37\t\0\0\0\0";
+    while ((len = read(fd, buf, sizeof(buf))) > 0) {
+	write(fd, buf, len);
+    }
+    close(fd);
+    _exit(0);
+}
+
 /* vim:set ts=8 sw=4 noet: */
