@@ -22,6 +22,8 @@ void list_insert(struct list *l, void *p)
     item->p = p;
     item->next = l->head;
     l->head = item;
+    if (l->tail == NULL)
+	    l->tail = l->head;
 }
 
 /* vim:set ts=8 sw=4 noet: */

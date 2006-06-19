@@ -7,7 +7,7 @@
 
 static inline void jump_to_trampoline()
 {
-    asm("jmp *%%eax\n" : : "a"(TRAMPOLINE_ADDR));
+    asm("jmp *%%eax\n" : : "a"(TRAMPOLINE_ADDR(0)));
 }
 
 static inline void* find_top_of_stack()

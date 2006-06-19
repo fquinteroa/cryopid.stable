@@ -31,7 +31,9 @@
 #define CP_CHUNK_FD		0x06
 #define CP_CHUNK_VMA		0x07
 #define CP_CHUNK_SIGHAND	0x08
-#define CP_CHUNK_FINAL		0x09
+#define CP_CHUNK_THREADS	0x09
+#define CP_CHUNK_THREAD		0x0A
+#define CP_CHUNK_FINAL		0x0F
 
 #define CP_CHUNK_MAGIC		0xC0DE
 
@@ -73,6 +75,16 @@ struct cp_tls {
     struct user_desc* u;
 };
 #endif
+
+struct cp_threads {
+    int num_threads;
+};
+
+struct cp_thread {
+    pid_t tid;
+    struct cp_chunk *regs;
+    struct cp_chunk *tls;
+};
 
 struct cp_vma {
     unsigned long start, length;
@@ -156,6 +168,8 @@ struct cp_chunk {
 	struct cp_fd fd;
 	struct cp_vma vma;
 	struct cp_sighand sighand;
+	struct cp_threads threads;
+	struct cp_thread thread;
 #ifdef __i386__
 	struct cp_i387_data i387_data;
 	struct cp_tls tls;
@@ -197,10 +211,11 @@ void read_chunk_misc(void *fptr, int action);
 void write_chunk_misc(void *fptr, struct cp_misc *data);
 
 /* cp_regs.c */
-void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image,
-	int stopped);
+void fetch_chunks_regs(pid_t pid, int flags, struct list *process_image, int stopped);
 void read_chunk_regs(void *fptr, int action);
 void write_chunk_regs(void *fptr, struct cp_regs *data);
+struct user *read_chunk_regs_noload(void *fptr, int action);
+void restore_registers_now(struct user *user, int index);
 
 #ifdef __i386__
 /* cp_i387.c */
@@ -213,6 +228,7 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l);
 void read_chunk_tls(void *fptr, int action);
 void write_chunk_tls(void *fptr, struct cp_tls *data);
 void install_tls_segv_handler();
+struct user_desc *read_chunk_tls_noload(void *fptr, int action);
 extern int emulate_tls;
 #endif
 
@@ -259,6 +275,17 @@ extern unsigned long vdso_end;
 void read_chunk_sighand(void *fptr, int action);
 void write_chunk_sighand(void *fptr, struct cp_sighand *data);
 void fetch_chunks_sighand(pid_t pid, int flags, struct list *l);
+
+/* cp_thread.c */
+void read_chunk_thread(void *fptr, int action);
+void write_chunk_thread(void *fptr, struct cp_thread *data);
+void fetch_chunks_thread(pid_t tid, pid_t pid, int flags, struct list *l);
+
+/* cp_threads.c */
+void read_chunk_threads(void *fptr, int action);
+void write_chunk_threads(void *fptr, struct cp_threads *data);
+void fetch_chunks_threads(pid_t pid, int flags, struct list *l, 
+	struct list *thread_list);
 
 #endif /* _CPIMAGE_H_ */
 

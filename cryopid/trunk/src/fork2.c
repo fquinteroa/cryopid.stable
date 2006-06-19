@@ -6,9 +6,19 @@
 #include <sys/wait.h>
 
 /* FIXME: so unbelievably racy. */
-int fork2(pid_t pid)
+
+void exec_fork2_helper(pid_t pid)
 {
 	extern char** environ;
+	char *argv[] = {"farewell", "kitty", "XXXXXXXXXX", NULL};
+	snprintf(argv[2], 10, "%d", pid);
+	execve("fork2_helper", argv, environ);
+	perror("execve");
+	_exit(50);
+}
+
+int fork2_ready_pid(pid_t pid)
+{
 	pid_t helper_pid;
 	int status;
 
@@ -41,13 +51,17 @@ int fork2(pid_t pid)
 			} else
 				return -1;
 		default: /* child */
-			{
-				char *argv[] = {"farewell", "kitty", "XXXXXXXXXX", NULL};
-				snprintf(argv[2], 10, "%d", pid);
-				execve("fork2_helper", argv, environ);
-				perror("execve");
-				_exit(50);
-			}
+			exec_fork2_helper(pid);
 	}
-	return fork();
+
+	return 0;
+}
+
+int fork2(pid_t pid) {
+	int err;
+	err = fork2_ready_pid(pid);
+	if (err == 0)
+	    return fork();
+	else
+	    return err;
 }

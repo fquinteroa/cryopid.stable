@@ -94,6 +94,12 @@ int read_chunk(void *fptr, int action)
 	case CP_CHUNK_SIGHAND:
 	    read_chunk_sighand(fptr, action);
 	    break;
+	case CP_CHUNK_THREADS:
+	    read_chunk_threads(fptr, action);
+	    break;
+	case CP_CHUNK_THREAD:
+	    read_chunk_thread(fptr, action);
+	    break;
 #ifdef __i386__
 	case CP_CHUNK_I387_DATA:
 	    read_chunk_i387_data(fptr, action);

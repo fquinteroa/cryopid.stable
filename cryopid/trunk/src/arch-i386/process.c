@@ -19,8 +19,6 @@
 #include "cpimage.h"
 #include "list.h"
 
-static int process_was_stopped = 0;
-
 char* backup_page(pid_t target, void* addr)
 {
     long* page = xmalloc(PAGE_SIZE);
@@ -188,12 +186,15 @@ static int process_is_stopped(pid_t pid)
     return mode == 'T';
 }
 
-static void start_ptrace(pid_t pid)
+void start_ptrace(pid_t pid, int *process_was_stopped)
 {
     long ret;
     int status;
+    int stopped;
 
-    process_was_stopped = process_is_stopped(pid);
+    stopped = process_is_stopped(pid);
+    if (process_was_stopped)
+	*process_was_stopped = stopped;
 
     ret = ptrace(PTRACE_ATTACH, pid, 0, 0);
     if (ret == -1) {
@@ -201,7 +202,7 @@ static void start_ptrace(pid_t pid)
 	exit(1);
     }
 
-    if (process_was_stopped)
+    if (stopped)
 	return; /* don't bother waiting for it, we'll just hang */
 
     ret = waitpid(pid, &status, 0);
@@ -231,11 +232,16 @@ static void end_ptrace(pid_t pid, int flags)
 
 void get_process(pid_t pid, int flags, struct list *process_image, long *bin_offset)
 {
+    int process_was_stopped;
     int success = 0;
     char* pagebackup;
     struct user_regs_struct r;
+    struct list thread_list;
+    struct item *cur;
 
-    start_ptrace(pid);
+    list_init(thread_list);
+
+    start_ptrace(pid, &process_was_stopped);
 
     if (save_registers(pid, &r) < 0) {
 	fprintf(stderr, "Unable to save process's registers!\n");
@@ -245,7 +251,6 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     /* The order below is very important. Do not change without good reason and
      * careful thought.
      */
-    fetch_chunks_tls(pid, flags, process_image);
 
     /* this gives us a scribble zone: */
     fetch_chunks_vma(pid, flags, process_image, bin_offset);
@@ -260,6 +265,12 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
 
     fetch_chunks_sighand(pid, flags, process_image);
     fetch_chunks_i387_data(pid, flags, process_image);
+
+    fetch_chunks_threads(pid, flags, process_image, &thread_list);
+    for (cur = thread_list.head; cur; cur = cur->next)
+	fetch_chunks_thread((pid_t)(cur->p), pid, flags, process_image);
+
+    fetch_chunks_tls(pid, flags, process_image);
     fetch_chunks_regs(pid, flags, process_image, process_was_stopped);
 
     success = 1;
@@ -267,6 +278,9 @@ void get_process(pid_t pid, int flags, struct list *process_image, long *bin_off
     restore_page(pid, (void*)scribble_zone, pagebackup);
     restore_registers(pid, &r);
 out_ptrace:
+    for(cur = thread_list.head; cur; cur = cur->next)
+	if ((pid_t)(cur->p) != pid)
+	    end_ptrace((pid_t)(cur->p), 0);
     end_ptrace(pid, flags);
     
     if (!success)

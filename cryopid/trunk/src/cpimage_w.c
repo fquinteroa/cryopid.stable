@@ -62,6 +62,12 @@ void write_chunk(void *fptr, struct cp_chunk *chunk)
 	case CP_CHUNK_SIGHAND:
 	    write_chunk_sighand(fptr, &chunk->sighand);
 	    break;
+	case CP_CHUNK_THREADS:
+	    write_chunk_threads(fptr, &chunk->threads);
+	    break;
+	case CP_CHUNK_THREAD:
+	    write_chunk_thread(fptr, &chunk->thread);
+	    break;
 #ifdef __i386__
 	case CP_CHUNK_I387_DATA:
 	    write_chunk_i387_data(fptr, &chunk->i387_data);

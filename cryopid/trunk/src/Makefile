@@ -1,7 +1,7 @@
 # Disabling tcpcp support saves a few KB in the binary.
 USE_TCPCP=y
 # Gtk+ support is still work in progress.
-USE_GTK=n
+USE_GTK=y
 
 ARCH=$(shell arch)
 
@@ -42,8 +42,8 @@ USE_GTK=n
 CFLAGS += -DARCH_HAS_ALIGNED_INSTRUCTIONS
 endif
 
-R_CHUNK_OBJS += cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_header.o arch/arch_r_objs.o fork2.o
-W_CHUNK_OBJS += cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_fifo.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o cp_w_header.o arch/arch_w_objs.o list.o netclient.o
+R_CHUNK_OBJS += cpimage_r.o cp_r_fd.o cp_r_fd_console.o cp_r_fd_file.o cp_r_fd_fifo.o cp_r_fd_socket.o cp_r_misc.o cp_r_sighand.o cp_r_vma.o cp_r_thread.o cp_r_threads.o cp_r_header.o arch/arch_r_objs.o fork2.o
+W_CHUNK_OBJS += cpimage_w.o cp_w_fd.o cp_w_fd_console.o cp_w_fd_file.o cp_w_fd_fifo.o cp_w_fd_socket.o cp_w_misc.o cp_w_sighand.o cp_w_vma.o cp_w_thread.o cp_w_threads.o cp_w_header.o arch/arch_w_objs.o list.o netclient.o
 COMMON_OBJS = common.c arch/asmfuncs.o
 STUB_TYPES = raw # gzip # raw buffered lzo
 STUBS = $(patsubst %,stub-%,$(STUB_TYPES))

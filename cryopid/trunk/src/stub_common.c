@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <asm/atomic.h>
+
 #include "cryopid.h"
 #include "cpimage.h"
 #include "process.h"
@@ -58,6 +60,7 @@ static void read_process()
     if (do_pause)
 	sleep(2);
 
+    atomic_dec(THREAD_COUNTER);
     jump_to_trampoline();
 }
 

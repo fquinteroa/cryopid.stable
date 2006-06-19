@@ -21,6 +21,22 @@ static void (*old_segvhandler)(int, siginfo_t*, void*);
 extern int set_thread_area(struct user_desc *u_info);
 #endif
 
+struct user_desc *read_chunk_tls_noload(void *fptr, int action)
+{
+    struct user_desc *u;
+    int ret;
+
+    u = xmalloc(sizeof(struct user_desc));
+
+    read_bit(fptr, u, sizeof(struct user_desc));
+
+    if (action & ACTION_PRINT)
+	fprintf(stderr, "TLS entry (%d): base_addr = 0x%lx", 
+		u->entry_number, u->base_addr);
+
+    return u;
+}
+
 void read_chunk_tls(void *fptr, int action)
 {
     struct user_desc u;

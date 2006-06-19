@@ -8,11 +8,13 @@
 #include "cryopid.h"
 #include "cpimage.h"
 
-int is_a_syscall(unsigned long inst, int canonical);
-int is_in_syscall(pid_t pid, void* user);
-void set_syscall_return(void* user, unsigned long val);
-int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
-int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
+extern void start_ptrace(pid_t pid, int *process_was_stopped);
+
+extern int is_a_syscall(unsigned long inst, int canonical);
+extern int is_in_syscall(pid_t pid, void* user);
+extern void set_syscall_return(void* user, unsigned long val);
+extern int memcpy_from_target(pid_t pid, void* dest, const void* src, size_t n);
+extern int memcpy_into_target(pid_t pid, void* dest, const void* src, size_t n);
 
 extern ssize_t r_read(pid_t pid, int fd, void* buf, size_t count);
 extern off_t r_lseek(pid_t pid, int fd, off_t offset, int whence);
