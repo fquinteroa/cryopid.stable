@@ -60,7 +60,8 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     *ptr2 = '\0';
     vma->start = strtoul(ptr1, NULL, 16);
 
-    if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+PAGE_SIZE) {
+    /* FIXME: 100 'threads' hardcoded below. do something smarter. */
+    if (vma->start >= TRAMPOLINES_START && vma->start <= TRAMPOLINES_START+(100*PAGE_SIZE)) {
 	fprintf(stderr, "     Ignoring map - looks like resumer trampoline.\n");
 	return 0;
     }
