@@ -1,7 +1,12 @@
 #ifndef _CPLAYOUT_H_
 #define _CPLAYOUT_H_
 
-#define TRAMPOLINE_ADDR		0x001000
+#define TRAMPOLINES_START	0x001000
+
+#define TRAMPOLINE_ADDR(x)	(TRAMPOLINES_START + (PAGE_SIZE*(1+(x))))
+
+#define THREAD_COUNTER_ADDR	TRAMPOLINES_START   /* address of atomic_t */
+#define THREAD_COUNTER		((atomic_t*)(THREAD_COUNTER_ADDR))
 
 #define RESUMER_START	0x00000000 /* Lowest location resumer will be at */
 #define RESUMER_END	0x00800000 /* Highest location resumer will be at */

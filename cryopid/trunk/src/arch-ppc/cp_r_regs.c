@@ -8,11 +8,11 @@
 
 static void load_chunk_regs(struct user *user, int stopped)
 {
-    long *cp, *code = (long*)TRAMPOLINE_ADDR, *data;
+    long *cp, *code = (long*)TRAMPOLINE_ADDR(0), *data;
 
     /* Create region for mini-resumer process. */
     syscall_check(
-	(int)mmap((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC,
+	(int)mmap((void*)TRAMPOLINE_ADDR(0), PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC,
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
     cp = code;
