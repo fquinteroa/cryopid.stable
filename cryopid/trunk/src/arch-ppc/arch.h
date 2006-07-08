@@ -4,6 +4,8 @@
 /* Used to poison memory that shouldn't be used. */
 #define ARCH_POISON		0xdeadbeef
 
+#define PAGE_SIZE	4096
+
 #define GB		(1024*1024*1024)
 
 #define _ARCH_NSIG       64
