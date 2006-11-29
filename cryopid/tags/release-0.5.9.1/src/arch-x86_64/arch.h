@@ -1,6 +1,9 @@
 #ifndef _ARCH_H_
 #define _ARCH_H_
 
+#include <sys/syscall.h>
+#include <unistd.h>
+
 /* Used to poison memory that shouldn't be used. */
 #define ARCH_POISON		0xdeadbeef04c0ffee
 
@@ -19,8 +22,10 @@ struct k_sigaction {
     arch_sigset_t sa_mask;
 };
 
-static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, ksa,
-	struct k_sigaction*, oksa, size_t, sigsetsize);
+static inline int rt_sigaction(int sig, const struct k_sigaction* ksa,
+	struct k_sigaction* oksa, size_t sigsetsize) {
+	return syscall(__NR_rt_sigaction, sig, ksa, oksa, sigsetsize);
+}
 
 extern int r_arch_prctl(pid_t pid, int code, unsigned long addr);
 

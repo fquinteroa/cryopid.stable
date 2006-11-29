@@ -1,6 +1,9 @@
 #ifndef _ARCH_H_
 #define _ARCH_H_
 
+#include <sys/syscall.h>
+#include <unistd.h>
+
 #include <asm/reg.h>
 
 /* Used to poison memory that shouldn't be used. */
@@ -35,8 +38,10 @@ struct user {
 	char		u_comm[32];		/* user command name */
 };
 
-static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, ksa,
-	struct k_sigaction*, oksa, size_t, sigsetsize);
+static inline int rt_sigaction(int sig, const struct k_sigaction* ksa,
+	struct k_sigaction* oksa, size_t sigsetsize) {
+	return syscall(__NR_rt_sigaction, sig, ksa, oksa, sigsetsize);
+}
 
 static inline unsigned long get_task_size() { return 0x40000000000UL; }
 
