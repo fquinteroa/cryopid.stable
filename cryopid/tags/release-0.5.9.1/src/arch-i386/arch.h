@@ -1,6 +1,9 @@
 #ifndef _ARCH_H_
 #define _ARCH_H_
 
+#include <sys/syscall.h>
+#include <unistd.h>
+
 /* Used to poison memory that shouldn't be used. */
 #define ARCH_POISON		0xdeadbeef
 
@@ -43,8 +46,9 @@ static inline unsigned long get_task_size()
 
 #define cp_sigaction rt_sigaction
 
-#define __NR_sys_clone __NR_clone
-static inline _syscall2(int, sys_clone, int, flags, void*, child_stack);
+static inline int sys_clone(int flags, void* child_stack) {
+	return syscall(__NR_clone, flags, child_stack);
+}
 
 void *plt_resolve(void *l, char *what);
 void *find_linkmap(void *elf_hdr);

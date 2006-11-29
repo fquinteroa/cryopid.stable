@@ -8,7 +8,7 @@
 #include "cpimage.h"
 #include "arch/arch.h"
 
-#define CRYOPID_VERSION "0.5.9"
+#define CRYOPID_VERSION "0.5.9.1"
 
 #define debug(s, x...) fprintf(stderr, s"\n", ##x)
 

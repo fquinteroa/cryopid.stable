@@ -4,7 +4,7 @@ USE_GTK=n
 
 ARCH=$(shell arch)
 
-CFLAGS = -g -Wall -Os -I. -Iarch -D__$(ARCH)__
+CFLAGS = -g -Wall -Os -fno-stack-protector -I. -Iarch -D__$(ARCH)__
 
 # Set arch-specific settings
 ifneq ($(filter i%86,$(ARCH)), )
