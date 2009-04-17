@@ -1,9 +1,6 @@
 #ifndef _ARCH_H_
 #define _ARCH_H_
 
-#include <sys/syscall.h>
-#include <unistd.h>
-
 /* Used to poison memory that shouldn't be used. */
 #define ARCH_POISON		0xdeadbeef
 
@@ -32,10 +29,14 @@ static inline _syscall4(int, rt_sigaction, int, sig, const struct k_sigaction*, 
 
 static inline unsigned long get_task_size() { return 0xf0000000; }
 
+#define __NR_rt_sigaction_sparc __NR_rt_sigaction
+static inline _syscall5(int, rt_sigaction_sparc, int, sig,
+    const struct k_sigaction*, ksa, struct k_sigaction*, oksa,
+    void*, restorer, size_t, masksz);
 static inline int cp_sigaction(int sig, const struct k_sigaction* ksa,
 		struct k_sigaction* oksa, size_t masksz)
 {
-    return syscall(__NR_rt_sigaction, sig, ksa, oksa, NULL, masksz);
+    return rt_sigaction_sparc(sig, ksa, oksa, NULL, masksz);
 }
 
 #define HIB(x) (((x) >> 10) & 0x003fffff)
