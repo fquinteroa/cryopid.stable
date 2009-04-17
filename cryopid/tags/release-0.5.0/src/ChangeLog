@@ -1,5 +1,0 @@
-0.5.0
- * AMD64 support
- * Seek to end of file if we started off there (eg, logfiles).
- * Remove unused/unimplemented flags from getopt.
- * Enable linking against uclibc.
