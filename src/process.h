@@ -1,7 +1,8 @@
 #ifndef _PROCESS_H_
 #define _PROCESS_H_
-
 #include <sys/types.h>
+#include <sys/user.h>
+
 #include <linux/kdev_t.h>
 #include <linux/types.h>
 

@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <asm/page.h>
 
 #include "cpimage.h"
 #include "process.h"
@@ -39,7 +38,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     char *ptr1, *ptr2;
     int dminor, dmajor;
     int old_vma_prot = -1;
-    int keep_vma_data;
+    int keep_vma_data = 0;
     static long last_vma_end;
 
     memset(vma, 0, sizeof(struct cp_vma));
@@ -60,7 +59,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     *ptr2 = '\0';
     vma->start = strtoul(ptr1, NULL, 16);
 
-    if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+PAGE_SIZE) {
+    if (vma->start >= TRAMPOLINE_ADDR && vma->start <= TRAMPOLINE_ADDR+_getpagesize) {
 	fprintf(stderr, "     Ignoring map - looks like resumer trampoline.\n");
 	return 0;
     }
@@ -88,7 +87,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     }
 
     vma->prot = 0;
-    ptr1 = ptr2+1;
+    ptr1 = ptr2+1; /* parse "perms" record in maps */
 
     if (ptr1[0] == 'r')
 	vma->prot |= PROT_READ;
@@ -113,7 +112,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
     else
 	vma->flags |= MAP_PRIVATE;
 
-    ptr1 = ptr1+5; /* to pgoff */
+    ptr1 = ptr1+5; /* parse "offset" record in maps */
     if ((ptr2 = strchr(ptr1, ' ')) == NULL) {
 	fprintf(stderr, "No end of pgoff in map line!\n");
 	return 0;
@@ -125,7 +124,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	vma->flags |= MAP_GROWSDOWN;
     }
 
-    ptr1 = ptr2+1;
+    ptr1 = ptr2+1; /* parse "dev" record in maps */
     if ((ptr2 = strchr(ptr1, ':')) == NULL) {
 	fprintf(stderr, "No end of major dev in map line!\n");
 	return 0;
@@ -149,7 +148,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    *bin_offset = last_vma_end;
     }
 
-    ptr1 = ptr2+1;
+    ptr1 = ptr2+1; /* parse "inode" and "pathname" records */
     if ((ptr2 = strchr(ptr1, ' ')) != NULL) {
 	*ptr2 = '\0';
 	vma->inode = strtoul(ptr1, NULL, 10);
@@ -246,6 +245,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	    ((vma->prot & PROT_WRITE) && (vma->flags & MAP_PRIVATE)) || 
 	    (vma->flags & MAP_ANONYMOUS)
 	    );
+
 
     /* If it's on disk and we're not saving libraries, checksum the source to
      * verify it really is the same.

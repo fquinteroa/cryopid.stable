@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <malloc.h>
 
 #include "cpimage.h"
@@ -61,6 +62,12 @@ extern struct stream_ops lzo_ops;
     char *stub_start = (char*)&_binary_stub_##s##_start; \
     long stub_size = (long)&_binary_stub_##s##_size
 
+#endif
+
+#ifdef _PAGE_SIZE
+#define _getpagesize	_PAGE_SIZE
+#else
+#define _getpagesize	getpagesize()
 #endif
 
 #endif /* _CRYOPID_H_ */

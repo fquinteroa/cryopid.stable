@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <asm/page.h>
+#include <sys/user.h>
 
 #include "cryopid.h"
 
@@ -45,25 +45,156 @@ void safe_read(int fd, void* dest, size_t count, char* desc)
 #ifdef COMPILING_STUB
 /* If we're a stub, lets use a custom malloc implementation so that we don't
  * collide with pages potentially in use by the application. Here's a really
- * really stupid malloc, that simply mmaps a new VMA for each request, and rounds
- * up to the next multiple of PAGE_SIZE.
+ * really stupid malloc.
  *
  * FIXME: do something smarter. Can we persuade malloc to stick to brk'ing and
  * not mmap()?
  */
 
+#ifdef __i386__
+/*
+ * Consistent with arch-i386/cplayout.h design about malloc handling on i386.
+ * areas[MAX_AREAS] is an array of struct "ele_area" that manage 32MB for custom
+ * malloc.
+*/
+#define MB	(1024*1024)
+#define MAX_AREAS	32  /* 32MB for custom malloc */
+
+typedef struct {
+    void *ptr_area;
+    unsigned int size_left;
+    unsigned int max;
+} ele_area;
+
+ele_area areas[MAX_AREAS];
+static int actual_ptr_areas = -1;
+
+static int init_ele_area(void)
+{
+    short int i;
+
+    for (i = 0; i < MAX_AREAS; i++) {
+	areas[i].ptr_area = NULL;
+	areas[i].size_left = 0;
+	areas[i].max = 0;
+    }
+    return EXIT_SUCCESS;
+}
+
+static int alloc_new_area(int index, size_t size)
+{
+    static long next_free_addr = MALLOC_START;
+    void *tmp_ptr;
+    unsigned int area_needed = MB;  /* min size to alloc */
+
+    while (area_needed < size)	/* decide how many MB needed */
+	area_needed <<= 1;
+    //printf("[alloc_new_area] area_needed: %u, area terminate at: %ld\n", area_needed, next_free_addr + area_needed);
+
+    if ((next_free_addr + area_needed) > MALLOC_END) {
+        fprintf(stderr, "our custom area for malloc is full\n");
+        return EXIT_FAILURE;
+    }
+    tmp_ptr = mmap((void*) next_free_addr, area_needed, 
+	    PROT_READ|PROT_WRITE, MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+
+    if (tmp_ptr == MAP_FAILED) {
+        fprintf(stderr, "error in mmap call: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+    else {
+        areas[index].ptr_area = tmp_ptr;
+        areas[index].max = area_needed;
+	areas[index].size_left = area_needed;
+	/* update the next mmap addr pointer rounded PAGE_SIZE */
+	next_free_addr = ((next_free_addr + area_needed + (_getpagesize-1)) & ~(_getpagesize-1));
+	//printf("[alloc_new_area] next_free_addr: %ld\n", next_free_addr);
+    }
+    return EXIT_SUCCESS;
+}
+
+static int index_area_to_use(size_t size)
+{
+    int i;
+	
+    if (actual_ptr_areas == -1) {   /* for the first time */
+	init_ele_area();
+	actual_ptr_areas = 0;
+	if (alloc_new_area(actual_ptr_areas, size) == EXIT_FAILURE)
+	    return MAX_AREAS;
+	return actual_ptr_areas;
+    }
+    /* actual_ptr_areas must address the last areas in use */
+    for (i = 0; i < MAX_AREAS; i++)
+	if (areas[i].max == 0)
+	    break;
+    actual_ptr_areas = i;
+
+    i = 0;
+    /* understand which "areas" can contain the requested size */
+    while (((areas[i].size_left < size) && (areas[i].size_left != 0))
+	&& (i < MAX_AREAS))
+	i++;
+
+    if (i == MAX_AREAS)	/* all the "areas" are in use */
+	return MAX_AREAS;
+    else if (areas[i].size_left == 0) {	/* alloc a new area */
+	actual_ptr_areas++;
+	if (alloc_new_area(actual_ptr_areas, size) == EXIT_FAILURE)
+	    return MAX_AREAS;
+	return actual_ptr_areas;
+    }
+    else if (areas[i].max == 0)	{ /* "i" is the index of the new area to allocate */
+	if (alloc_new_area(i, size) == EXIT_FAILURE)
+	    return MAX_AREAS;
+    }
+    return i; /* "i" is the index of the area to use */
+}
+
+static void *cp_malloc_hook(size_t size, const void *caller)
+{
+    int index = 0;
+    void *ptr_to_use = NULL;
+
+    //printf("using custom malloc. request in size: %d\n", size);
+
+    index = index_area_to_use(size);
+    if (index == MAX_AREAS) {
+	fprintf(stderr, "custom malloc memory full\n");
+	return NULL;
+    }
+    /* calculate the real pointer to the area allocated and the size_left of the chose "areas" */
+    ptr_to_use = areas[index].ptr_area + (areas[index].max - areas[index].size_left);
+    areas[index].size_left -= size;
+    //printf("pointer value: %u, index: %d, size_left: %d\n", (unsigned int) ptr_to_use, index, areas[index].size_left);
+
+    return ptr_to_use;
+}
+
+#else
+/*
+ * The old style for arch not i386. It's less elegant and clean.
+ * Here's a really really stupid malloc, that simply mmaps a new 
+ * VMA for each request, and rounds up to the next multiple of PAGE_SIZE.
+ */
 static void *cp_malloc_hook(size_t size, const void *caller)
 {
     static long next_free_addr = MALLOC_START;
-    int full_len = (size + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
+
+    int full_len = (size + (_getpagesize-1)) & ~(_getpagesize-1);
+
     if (next_free_addr + full_len > MALLOC_END)
 	return NULL; /* out of memory here */
+
     void *p = mmap((void*)next_free_addr, full_len, PROT_READ|PROT_WRITE,
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+	    
     assert(p == (void*)next_free_addr);
     next_free_addr += full_len;
     return p;
 }
+
+#endif	/* __i386__ */
 
 static void cp_free_hook(void *ptr, const void *caller)
 {
