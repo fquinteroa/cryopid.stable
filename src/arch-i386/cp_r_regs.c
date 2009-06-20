@@ -1,4 +1,5 @@
-#include <linux/user.h>
+#include <sys/types.h>
+#include <sys/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
 #include <sys/mman.h>
@@ -11,6 +12,7 @@
 extern int need_gtk;
 #endif
 
+
 static void load_chunk_regs(struct user *user, int stopped)
 {
     char *cp, *code = (char*)TRAMPOLINE_ADDR;
@@ -18,7 +20,7 @@ static void load_chunk_regs(struct user *user, int stopped)
 
     /* Create region for mini-resumer process. */
     syscall_check(
-	(int)mmap((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC,
+	(int)mmap((void*)TRAMPOLINE_ADDR, _getpagesize, PROT_READ|PROT_WRITE|PROT_EXEC,
 	    MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, 0, 0), 0, "mmap");
 
     cp = code;
@@ -28,8 +30,8 @@ static void load_chunk_regs(struct user *user, int stopped)
     *(long*)r->esp = r->eflags;
     
     /* set up gs */
-    if (!emulate_tls && r->gs != 0) {
-	*cp++=0x66;*cp++=0xb8; *(short*)(cp) = r->gs; cp+=2; /* mov foo, %eax  */
+    if (!emulate_tls && r->xgs != 0) {
+	*cp++=0x66;*cp++=0xb8; *(short*)(cp) = r->xgs; cp+=2; /* mov foo, %eax  */
 	*cp++=0x8e;*cp++=0xe8; /* mov %eax, %gs */
     }
 
@@ -90,10 +92,10 @@ static void load_chunk_regs(struct user *user, int stopped)
     /* jump back to where we were. */
     *cp++=0xea;
     *(unsigned long*)(cp) = r->eip; cp+= 4;
-    asm("mov %%cs,%w0": "=q"(r->cs)); /* ensure we use the right CS for the current kernel */
-    *(unsigned short*)(cp) = r->cs; cp+= 2; /* jmp cs:foo */
+    asm("mov %%cs,%w0": "=q"(r->xcs)); /* ensure we use the right CS for the current kernel */
+    *(unsigned short*)(cp) = r->xcs; cp+= 2; /* jmp cs:foo */
     syscall_check(
-	(int)mprotect((void*)TRAMPOLINE_ADDR, PAGE_SIZE, PROT_READ|PROT_EXEC),
+	(int)mprotect((void*)TRAMPOLINE_ADDR, _getpagesize, PROT_READ|PROT_EXEC),
 	    0, "mmap");
 }
 
@@ -111,7 +113,7 @@ void read_chunk_regs(void *fptr, int action)
 	fprintf(stderr, "\tesi: 0x%08lx edi: 0x%08lx ebp: 0x%08lx esp: 0x%08lx\n",
 		user.regs.esi, user.regs.edi, user.regs.ebp, user.regs.esp);
 	fprintf(stderr, "\t ds: 0x%08x  es: 0x%08x  fs: 0x%08x  gs: 0x%08x\n",
-		user.regs.ds, user.regs.es, user.regs.fs, user.regs.gs);
+		user.regs.xds, user.regs.xes, user.regs.xfs, user.regs.xgs);
 	fprintf(stderr, "\teip: 0x%08lx eflags: 0x%08lx",
 		user.regs.eip, user.regs.eflags);
     }

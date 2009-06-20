@@ -1,5 +1,4 @@
 #include <elf.h>
-#include <asm/page.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -68,7 +67,7 @@ void write_stub(int fd, long offset)
     assert(e->e_shstrndx != SHN_UNDEF);
 
     s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize)));
-    strtab = stub_start+s->sh_offset;
+    strtab = stub_start+s->sh_offset; /* string table start */
 
     /* Locate where this binary's brk would start */
     for (i = 0; i < e->e_phnum; i++) {
@@ -84,11 +83,12 @@ void write_stub(int fd, long offset)
 
     /* Set where we want it to start */
     offset -= cur_brk;
-    offset &= ~(PAGE_SIZE - 1);
+    offset &= ~(_getpagesize - 1);
 
     got_it = 0;
     for (i = 0; i < e->e_shnum; i++) {
 	s = (Elf32_Shdr*)(stub_start+e->e_shoff+(i*e->e_shentsize));
+	/* sh_addr: this member gives the address at which the section’s first byte should reside in the process image */
 	s->sh_addr += offset;
 
 	if (s->sh_type != SHT_PROGBITS || s->sh_name == 0)
@@ -110,17 +110,17 @@ void write_stub(int fd, long offset)
 		mmap_prot = PROT_READ | PROT_WRITE;
 		if (p->p_flags & PF_X) mmap_prot |= PROT_EXEC;
 
-		mmap_addr = p->p_vaddr & ~(PAGE_SIZE - 1);
+		mmap_addr = p->p_vaddr & ~(_getpagesize - 1);
 		mmap_len = p->p_memsz + (p->p_vaddr - mmap_addr);
-		mmap_len = (mmap_len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+		mmap_len = (mmap_len + (_getpagesize - 1)) & ~(_getpagesize - 1);
 
 		write_tramp_snippet(&tp, 
 			mmap_addr, mmap_len, mmap_prot,
 			p->p_vaddr + offset, p->p_vaddr, p->p_filesz);
 	    }
 
-	    write_tramp_jump(&tp, e->e_entry);
-	    e->e_entry = s->sh_addr;
+	    write_tramp_jump(&tp, e->e_entry); /* jump to the real entry point */
+	    e->e_entry = s->sh_addr; /* set new entry point for the image */
 	}
 
 	if (memcmp(strtab+s->sh_name, "cryopid.image", 13) == 0) {

@@ -2,7 +2,6 @@
 #define _STUB_H_
 
 #include <sys/mman.h>
-#include <asm/page.h>
 #include "cryopid.h"
 
 static inline void jump_to_trampoline()
@@ -14,7 +13,7 @@ static inline void* find_top_of_stack()
 {
     unsigned int tmp;
     /* Return the top of the current stack page. */
-    return (void*)(((long)&tmp + PAGE_SIZE - 1) & ~(PAGE_SIZE-1));
+    return (void*)(((long)&tmp + (_getpagesize - 1)) & ~(_getpagesize - 1));
 }
 
 static inline void relocate_stack()
@@ -23,14 +22,14 @@ static inline void relocate_stack()
     void *top_of_new_stack;
     void *top_of_our_memory = (void*)MALLOC_END;
     void *top_of_all_memory;
-    long size_of_new_stack;
+    int size_of_new_stack;
 
     /* Reposition the stack at top_of_old_stack */
     top_of_old_stack = find_top_of_stack();
     top_of_all_memory = (void*)get_task_size();
 
     top_of_new_stack = (void*)TOP_OF_STACK;
-    size_of_new_stack = PAGE_SIZE;
+    size_of_new_stack = _getpagesize;
 
     syscall_check( (int)
 	mmap(top_of_new_stack - size_of_new_stack, size_of_new_stack,

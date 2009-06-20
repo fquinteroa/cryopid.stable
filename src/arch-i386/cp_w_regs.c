@@ -1,4 +1,5 @@
-#include <linux/user.h>
+#include <sys/types.h>
+#include <sys/user.h>
 #include <linux/unistd.h>
 #include <asm/ldt.h>
 #include <sys/mman.h>

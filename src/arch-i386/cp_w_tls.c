@@ -1,4 +1,3 @@
-#include <linux/user.h>
 #include <linux/unistd.h>
 #include <signal.h>
 #include <asm/ldt.h>
@@ -17,15 +16,23 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l)
     int i;
     struct cp_chunk *chunk;
     struct user_desc *u = NULL;
+
+	/* from LXR - arch/x86/include/asm/segment.h
+		*   6 - TLS segment #1  [ glibc's TLS segment ]
+		*   7 - TLS segment #2  [ Wine's %fs Win32 segment ]
+		*   8 - TLS segment #3
+	*/
+
     
-    for (i = 0; i < 256; i++) { /* FIXME: verify this magic number */
+    for (i = 6; i <= 8; i++) { /* FIXME: verify this magic number */
 	if (!u) {
 	    u = xmalloc(sizeof(struct user_desc));
 	    memset(u, 0, sizeof(struct user_desc));
 	}
 	u->entry_number = i;
-	if (ptrace(PTRACE_GET_THREAD_AREA, pid, i, u) == -1)
+	if (ptrace(PTRACE_GET_THREAD_AREA, pid, i, u) == -1) {
 	    continue;
+	}
 
 	chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_TLS;

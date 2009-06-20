@@ -10,8 +10,8 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <linux/net.h>
-#include <asm/page.h>
-#include <asm/user.h>
+#include <sys/types.h>
+#include <sys/user.h>
 
 #include "linux/tcpcp.h"
 
@@ -23,10 +23,10 @@ static int process_was_stopped = 0;
 
 char* backup_page(pid_t target, void* addr)
 {
-    long* page = xmalloc(PAGE_SIZE);
+    long* page = xmalloc(_getpagesize);
     int i;
     long ret;
-    for(i = 0; i < PAGE_SIZE/sizeof(long); i++) {
+    for(i = 0; i < _getpagesize/sizeof(long); i++) {
 	ret = ptrace(PTRACE_PEEKTEXT, target, (void*)((long)addr+(i*sizeof(long))), 0);
 	if (errno) {
 	    perror("ptrace(PTRACE_PEEKTEXT)");
@@ -49,7 +49,7 @@ int restore_page(pid_t target, void* addr, char* page)
     long *p = (long*)page;
     int i;
     assert(page);
-    for (i = 0; i < PAGE_SIZE/sizeof(long); i++) {
+    for (i = 0; i < _getpagesize/sizeof(long); i++) {
 	if (ptrace(PTRACE_POKETEXT, target, (void*)((long)addr+(i*sizeof(long))), p[i]) == -1) {
 	    perror("ptrace(PTRACE_POKETEXT)");
 	    free(page);
@@ -386,7 +386,7 @@ ssize_t r_read(pid_t pid, int fd, void* buf, size_t count)
     int off;
     off = 0;
     while (count > 0) {
-	int amt = PAGE_SIZE; /* must be less than size of scribble zone */
+	int amt = _getpagesize; /* must be less than size of scribble zone */
 	int err;
 	if (count < amt)
 	    amt = count;

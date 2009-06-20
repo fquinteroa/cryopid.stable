@@ -1,4 +1,5 @@
-#include <linux/user.h>
+#include <sys/types.h>
+#include <sys/user.h>
 #include <sys/ptrace.h>
 #include <string.h>
 #include <errno.h>
@@ -8,8 +9,8 @@
 
 void read_chunk_i387_data(void *fptr, int action)
 {
-    struct user_i387_struct u;
-    read_bit(fptr, &u, sizeof(struct user_i387_struct));
+    struct user_fpregs_struct u;
+    read_bit(fptr, &u, sizeof(struct user_fpregs_struct));
 
     if (action & ACTION_PRINT)
 	fprintf(stderr, "i387 state (not currently restored)");
