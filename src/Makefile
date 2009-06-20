@@ -2,9 +2,15 @@
 USE_TCPCP=y
 USE_GTK=n
 
-ARCH=$(shell arch)
+KERN=$(shell uname -r)
+ARCH=$(shell uname -m)
 
-CFLAGS = -g -Wall -Os -fno-stack-protector -I. -Iarch -D__$(ARCH)__
+# Test if this gcc supports stack protection (and if so, turn it off).
+ifeq ($(shell $(CC) -E -fno-stack-protector - < /dev/null > /dev/null 2>&1 && echo 1),1)
+CFLAGS_GCC_SP = -fno-stack-protector
+endif
+
+CFLAGS = -g -Wall -O0 $(CFLAGS_GCC_SP) -I. -Iarch -D__$(ARCH)__ 
 
 # Set arch-specific settings
 ifneq ($(filter i%86,$(ARCH)), )
@@ -66,12 +72,12 @@ DEPAX = test ! -x $(CHPAX) || $(CHPAX) -xperms
 all: arch $(TARGETS) $(COMMON_OBJS) $(R_CHUNK_OBJS) $(W_CHUNK_OBJS)
 
 arch:
-	! test -h arch && rm -f arch && ln -s arch-$(ARCH) arch || true
-	make -C arch 'CFLAGS+=$(DEFINES)'
+	ln -s arch-$(ARCH) arch 
+	make -C arch 'CFLAGS+=$(DEFINES) $(CFLAGS_GCC_SP)'
 
 clean:
 	rm -f *.o arch/*.o $(TARGETS) 
-	rm -f arch
+	rm -f arch/arch-$(ARCH) arch
 
 stub-image-%.o: stub-%
 	@echo Generating binary object of $^
