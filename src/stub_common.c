@@ -91,7 +91,7 @@ void usage(char* argv0)
 #endif
 "            requires at least Gtk+ 2.10)\n"
 "\n"
-"This image was created by CryoPID %s. http://cryopid.berlios.de/\n",
+"This image was created by CryoPID %s. http://sharesource.org/project/cryopid/\n",
     argv0, CRYOPID_VERSION);
     exit(1);
 }
@@ -101,6 +101,7 @@ void real_main(int argc, char** argv) __attribute__((noinline));
 void real_main(int argc, char** argv)
 {
     image_fd = 42;
+
     /* See if we're being executed for the second time. If so, read arguments
      * from the file.
      */
@@ -192,11 +193,14 @@ int main(int argc, char**argv, char **envp)
 
     /* Take a copy of our argc/argv and environment below we blow them away */
     real_argc = argc;
-    real_argv = (char**)xmalloc((sizeof(char*)*argc)+1);
-    for(i=0; i < argc; i++)
-	real_argv[i] = strdup(argv[i]);
-    real_argv[i] = NULL;
-
+    real_argv = (char**) xmalloc((sizeof(char*)*argc) + 1);
+    for (i = 0; i < argc; i++) {
+	real_argv[i] = (char*) xmalloc(strlen(argv[i]) + 1);
+	memcpy(real_argv[i], argv[i], strlen(argv[i]) + 1);
+    }
+    real_argv[i] = (char*) xmalloc(sizeof('\0'));
+    *real_argv[i] = '\0';
+    
     for(i = 0; envp[i]; i++); /* count environment variables */
     real_environ = xmalloc((sizeof(char*)*i)+1);
     for(i = 0; envp[i]; i++) {
@@ -211,7 +215,7 @@ int main(int argc, char**argv, char **envp)
 	}
 #endif
     }
-    *real_environ = NULL;
+    *real_environ = '\0';
     environ = real_environ;
 
     real_fd = open_self();
