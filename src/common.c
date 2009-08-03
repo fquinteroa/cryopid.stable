@@ -157,7 +157,9 @@ static void *cp_malloc_hook(size_t size, const void *caller)
     void *ptr_to_use = NULL;
 
     //printf("using custom malloc. request in size: %d\n", size);
-
+    
+    while ((size % sizeof(int)) != 0)
+	size++;
     index = index_area_to_use(size);
     if (index == MAX_AREAS) {
 	fprintf(stderr, "custom malloc memory full\n");
@@ -166,7 +168,10 @@ static void *cp_malloc_hook(size_t size, const void *caller)
     /* calculate the real pointer to the area allocated and the size_left of the chose "areas" */
     ptr_to_use = areas[index].ptr_area + (areas[index].max - areas[index].size_left);
     areas[index].size_left -= size;
-    //printf("pointer value: %u, index: %d, size_left: %d\n", (unsigned int) ptr_to_use, index, areas[index].size_left);
+    /*printf("pointer value [dec]: %u, pointer value [x]: %x, index: %d, size_left: %d\n", 
+	(unsigned int) ptr_to_use, (unsigned int) ptr_to_use, index, areas[index].size_left);*/
+    if (memset(ptr_to_use, 0, size) != ptr_to_use)
+	bail("[E] failed to reset memory area");
 
     return ptr_to_use;
 }
