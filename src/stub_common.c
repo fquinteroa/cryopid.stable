@@ -138,7 +138,7 @@ void real_main(int argc, char** argv)
 		long_options, &option_index);
 	if (c == -1)
 	    break;
-	switch(c) {
+	switch (c) {
 	    case 'd':
 		action &= ~ACTION_LOAD;
 		action |= ACTION_PRINT;

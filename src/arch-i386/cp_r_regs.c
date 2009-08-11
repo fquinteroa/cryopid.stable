@@ -112,7 +112,7 @@ void read_chunk_regs(void *fptr, int action)
 		user.regs.eax, user.regs.ebx, user.regs.ecx, user.regs.edx);
 	fprintf(stderr, "\tesi: 0x%08lx edi: 0x%08lx ebp: 0x%08lx esp: 0x%08lx\n",
 		user.regs.esi, user.regs.edi, user.regs.ebp, user.regs.esp);
-	fprintf(stderr, "\t ds: 0x%08x  es: 0x%08x  fs: 0x%08x  gs: 0x%08x\n",
+	fprintf(stderr, "\t ds: 0x%08lx  es: 0x%08lx  fs: 0x%08lx  gs: 0x%08lx\n",
 		user.regs.xds, user.regs.xes, user.regs.xfs, user.regs.xgs);
 	fprintf(stderr, "\teip: 0x%08lx eflags: 0x%08lx",
 		user.regs.eip, user.regs.eflags);

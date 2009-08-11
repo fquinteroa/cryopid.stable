@@ -22,7 +22,6 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l)
 		*   7 - TLS segment #2  [ Wine's %fs Win32 segment ]
 		*   8 - TLS segment #3
 	*/
-
     
     for (i = 6; i <= 8; i++) { /* FIXME: verify this magic number */
 	if (!u) {
@@ -31,9 +30,10 @@ void fetch_chunks_tls(pid_t pid, int flags, struct list *l)
 	}
 	u->entry_number = i;
 	if (ptrace(PTRACE_GET_THREAD_AREA, pid, i, u) == -1) {
+	    debug("TLS segment #%d unfetchable", i);
 	    continue;
 	}
-
+	printf("[+] TLS segment #%d fetched: base address at 0x%x\n", i, u->base_addr);
 	chunk = xmalloc(sizeof(struct cp_chunk));
 	chunk->type = CP_CHUNK_TLS;
 	chunk->tls.u = u;

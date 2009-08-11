@@ -60,14 +60,14 @@ void write_stub(int fd, long offset)
      * ie, offset = offset - round_to_page(code_len) - round_to_page(data_len)
      */
 
-    e = (Elf32_Ehdr*)stub_start;
+    e = (Elf32_Ehdr*)stub_start; /* pointer to our ELF header */
 
-    assert(e->e_shoff != 0);
-    assert(e->e_shentsize == sizeof(Elf32_Shdr));
-    assert(e->e_shstrndx != SHN_UNDEF);
+    assert(e->e_shoff != 0); /* check section header table’s file offset */
+    assert(e->e_shentsize == sizeof(Elf32_Shdr)); /* check section header entry size */
+    assert(e->e_shstrndx != SHN_UNDEF); /* must exist a section name string table */
 
-    s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize)));
-    strtab = stub_start+s->sh_offset; /* string table start */
+    s = (Elf32_Shdr*)(stub_start+(e->e_shoff+(e->e_shstrndx*e->e_shentsize))); /* Elf32_Shdr start for name string table */
+    strtab = stub_start+s->sh_offset; /* string table start, from the beginning of the ELF */
 
     /* Locate where this binary's brk would start */
     for (i = 0; i < e->e_phnum; i++) {
@@ -88,7 +88,7 @@ void write_stub(int fd, long offset)
     got_it = 0;
     for (i = 0; i < e->e_shnum; i++) {
 	s = (Elf32_Shdr*)(stub_start+e->e_shoff+(i*e->e_shentsize));
-	/* sh_addr: this member gives the address at which the section’s first byte should reside in the process image */
+	/* sh_addr: address at which the section’s first byte should reside in the process image */
 	s->sh_addr += offset;
 
 	if (s->sh_type != SHT_PROGBITS || s->sh_name == 0)
@@ -110,6 +110,10 @@ void write_stub(int fd, long offset)
 		mmap_prot = PROT_READ | PROT_WRITE;
 		if (p->p_flags & PF_X) mmap_prot |= PROT_EXEC;
 
+		/* 
+		    p_vaddr: virtual address at which the first byte of the segment resides in memory
+		    p_memsz: number of bytes in the memory image of the segment; it may be zero
+		*/
 		mmap_addr = p->p_vaddr & ~(_getpagesize - 1);
 		mmap_len = p->p_memsz + (p->p_vaddr - mmap_addr);
 		mmap_len = (mmap_len + (_getpagesize - 1)) & ~(_getpagesize - 1);

@@ -38,8 +38,9 @@ static inline void relocate_stack()
 	0, "mmap(newstack)");
     memset(top_of_new_stack - size_of_new_stack, 0, size_of_new_stack);
     memcpy(top_of_new_stack - size_of_new_stack,
-	    top_of_old_stack - size_of_new_stack, /* FIX ME */
+	    top_of_old_stack - size_of_new_stack, /* FIXME */
 	    size_of_new_stack);
+    /* relocate %esp and %ebp value in confirmation of the new stack */
     __asm__ ("addl %0, %%esp" : : "a"(top_of_new_stack - top_of_old_stack));
     __asm__ ("addl %0, %%ebp" : : "a"(top_of_new_stack - top_of_old_stack));
 

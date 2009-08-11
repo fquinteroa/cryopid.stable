@@ -256,7 +256,7 @@ static int get_one_vma(pid_t pid, char* line, struct cp_vma *vma,
 	unsigned int c;
 	static char buf[4096];
 
-	keep_vma_data = 1; /* Assume guiltly until proven innocent */
+	keep_vma_data = 1; /* Assume guilty until proven innocent */
 
 	if ((lfd = open(vma->filename, O_RDONLY)) == -1)
 	    goto out;

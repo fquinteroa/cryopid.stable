@@ -33,7 +33,7 @@ void read_chunk_tls(void *fptr, int action)
 	return;
 
     if (action & ACTION_PRINT)
-	fprintf(stderr, "TLS entry (%d): base_addr = 0x%lx", 
+	fprintf(stderr, "TLS entry (%d): base_addr = 0x%x", 
 		u.entry_number, u.base_addr);
 
     if (!(action & ACTION_LOAD))
