@@ -59,14 +59,14 @@ struct cp_misc {
 };
 
 struct cp_regs {
-    struct user32 *user_data;
+    struct user *user_data;
     void *opaque; /* For arch-specific data */
     int stopped;
 };
 
 #ifdef __i386__
 struct cp_i387_data {
-    struct user_i387_ia32_struct* i387_data;
+    struct user_fpregs_struct* i387_data;
 };
 
 struct cp_tls {
